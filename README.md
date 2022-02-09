@@ -9,7 +9,7 @@ The library relies on modern C++ features (move semantics, variadic templates, c
 
 ## Technical summary
 
-- **C++ version:** 17
+- **Language:** C++17
 - **Handlers**: deep, one-shot, parametrised [1]
 
 [1] - In the library handlers are objects, so they can naturally contain any data, auxiliary functions, and additional programmer's interface, as in the `threads` example below.
