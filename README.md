@@ -5,7 +5,7 @@ A library for programming with effect handlers in C++
 
 **Effect handlers** allow for programming with user-defined computational effects, with applications including custom lightweight concurrency (threads, async-await, actors, generators), error handling, dependency injection, etc. Effect handlers originate from the realm of functional programming, and the main goal of this **highly experimental** library is to explore how they fit in the more object-oriented setting of C++.
 
-The library relies on modern C++ features (move semantics, variadic templates, compile-time evaluation) to achieve elegant programmer-level interface, memory management of handlers, and relative type-safety. Internally, it uses the [boost::contex](https://www.boost.org/doc/libs/1_74_0/libs/context/doc/html/index.html) library for call-stack manipulation, and so it implements one-shot handlers only.
+The library relies on modern C++ features (move semantics, variadic templates, compile-time evaluation) to achieve elegant programmer-level interface, memory management of handlers, and relative type-safety. Internally, it uses the [boost::context](https://www.boost.org/doc/libs/1_74_0/libs/context/doc/html/index.html) library for call-stack manipulation, and so it implements one-shot handlers only.
 
 ## Technical summary
 
