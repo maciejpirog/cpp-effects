@@ -7,6 +7,13 @@ A library for programming with effect handlers in C++
 
 The library relies on modern C++ features (move semantics, variadic templates, compile-time evaluation) to achieve elegant programmer-level interface, memory management of handlers, and relative type-safety. Internally, it uses the [boost::contex](https://www.boost.org/doc/libs/1_74_0/libs/context/doc/html/index.html) library for call-stack manipulation, and so it implements one-shot handlers only.
 
+## Technical summary
+
+- **C++ version:** 17
+- **Handlers**: deep, one-shot, parametrised [1]
+
+[1] - In the library handlers are objects, so they can naturally contain any data, auxiliary functions, and additional programmer's interface, as in the `threads` example below.
+
 ## Compilation
 
 The easiest way to compile the library and the examples is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
