@@ -9,7 +9,7 @@ The library relies on modern C++ features (move semantics, variadic templates, c
 
 ## A quick example: lightweight cooperative threads
 
-As a sneak preview, we can use effect handlers to define our own tiny library for cooperative lightweight threads. The programmer's interface for threads will consist of two functions, `yield` and `fork`, together with a class that serves as a scheduler: 
+As a sneak preview, we can use effect handlers to define our own tiny library for cooperative lightweight (threads)[example/threads.cpp]. The programmer's interface will consist of two functions, `yield` and `fork`, together with a class that implements a scheduler: 
 
 ```cpp
 void yield();                          // Used by a thread to give up control
@@ -17,15 +17,15 @@ void fork(std::function<void()> proc); // Start a new thread
 
 class Scheduler {
 public:
-  static void Start(std::function<void()> f)
+  static void Start(std::function<void()> f);
 private:
   ...
 };
 ```
 
-The static member function `Start` initiates the scheduler with `f` as the body of the first thread, and returns when all threads finish.
+The static member function `Start` initiates the scheduler with `f` as the body of the first thread. It returns when all threads finish their jobs.
 
-To implement this interface, we first define two **commands**, which are data structures used to enable communication between the client code and the handler. We implemnt `yield` and `fork` to invoke these commands. (The name of the class `OneShot` is supposed to remind the programmer that we're dealing with one-shot handlers only, meaning you cannot resume the same resumption twice). 
+To implement this interface, we first define two **commands**, which are data structures used for transferring control from the client code to the handler. We implement `yield` and `fork` to invoke these commands. (The name of the class `OneShot` is supposed to remind the programmer that we're dealing with one-shot handlers only, meaning you cannot resume the same resumption twice). 
 
 ```cpp
 #include "cpp-effects/cpp-effects.h"
@@ -37,20 +37,18 @@ struct Fork : Command<void> {
   std::function<void()> proc;
 };
 
-// Used by a thread to give up control
 void yield()
 {
   OneShot::InvokeCmd(Yield{});
 }
 
-// Spawns a new thread
 void fork(std::function<void()> proc)
 {
   OneShot::InvokeCmd(Fork{{}, proc});
 }
 ```
 
-We define the scheduler, which is a **handler** that can handle the two commands by pushing the resumptions to the queue.
+We define the scheduler, which is a **handler** that can interpret the two commands by pushing the resumptions (i.e., captured continuations) to the queue.
 
 ```cpp
 // Res is the type of suspended threads
@@ -58,7 +56,7 @@ using Res = std::unique_ptr<Resumption<void, void>>;
 
 class Scheduler : public Handler<void, void, Yield, Fork> {
 public:
-  static void Start(const std::function<void()>& f)
+  static void Start(std::function<void()> f)
   {
     Run(f);
     while (!queue.empty()) { // Round-robin scheduling
@@ -69,7 +67,7 @@ public:
   }
 private:
   static std::list<Res> queue;
-  static void Run(const std::function<void()>& f)
+  static void Run(std::function<void()>)
   {
     OneShot::Handle<Scheduler>(f);
   }
@@ -88,7 +86,7 @@ private:
 std::list<Res> Scheduler::queue;
 ```
 
-Now, we can test the library by starting a few threads:
+And that's all it takes! We can now test our library by starting a few threads:
 
 ```cpp
 void worker(int k)

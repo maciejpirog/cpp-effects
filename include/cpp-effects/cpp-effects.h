@@ -7,7 +7,7 @@
 #ifndef HANDLER_H
 #define HANDLER_H
 
-// Use Boost with supprot for Valgrind
+// Use Boost with support for Valgrind
 /*
 #ifndef BOOST_USE_VALGRIND
 #define BOOST_USE_VALGRIND
@@ -33,9 +33,9 @@ namespace CppEffects {
 
 namespace ctx = boost::context;
 
-// ------------------------------------------------
-// Auxilliary class to deal with voids in templates
-// ------------------------------------------------
+// -----------------------------------------------
+// Auxiliary class to deal with voids in templates
+// -----------------------------------------------
 
 template <typename T>
 struct Tangible {
@@ -149,17 +149,19 @@ struct Transfer : TransferBase {
 // <0  -- auto-generated labels
 
 struct MetaframeBase {
-  std::vector<std::type_index> handledCmds;
-  int64_t label;
-  ctx::fiber fiber;
+  MetaframeBase() = default;
+  MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds) { }
   virtual ~MetaframeBase() { }
   void DebugPrint() const { std::cout << "[" << label << "," << (bool)fiber << "]"; }
+  const std::vector<std::type_index> handledCmds;
+  int64_t label;
+  ctx::fiber fiber;
 };
 
 // When invoking a command in the client code, we know the type of the
 // command, but we cannot know the type of the handler, hence the
 // handler needs to inherit from CanInvokeCmdClause, which does not
-// specify the "Answer" type.
+// need the "Answer" type.
 
 template <typename Cmd>
 struct CanInvokeCmdClause {
@@ -195,7 +197,7 @@ class Handler : public MetaframeBase, public CmdClause<Answer, Cmds>... {
 public:
   using AnswerType = Answer;
   using BodyType = Body;
-  Handler() { handledCmds = {typeid(Cmds)...}; } // Can this be a constexpr?
+  Handler() : MetaframeBase({typeid(Cmds)...}) {}
   virtual Answer ReturnClause(Body b) = 0;
 private:
   Answer RunReturnClause(Tangible<Body> b) { return ReturnClause(std::move(b.value)); }
@@ -211,7 +213,7 @@ class Handler<Answer, void, Cmds...> : public MetaframeBase, public CmdClause<An
 public:
   using AnswerType = Answer;
   using BodyType = void;
-  Handler() { handledCmds = {typeid(Cmds)...}; } // As above: Can this be a constexpr?
+  Handler() : MetaframeBase({typeid(Cmds)...}) {}
   virtual Answer ReturnClause() = 0;
 private:
   Answer RunReturnClause(Tangible<void>) { return ReturnClause(); }
