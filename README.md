@@ -9,7 +9,7 @@ The library relies on modern C++ features (move semantics, variadic templates, c
 
 ## A quick example: lightweight cooperative threads
 
-Here's a sneak preview of how one can use the library to define their own simple cooperative lightweight threads with a scheduler. The programmer's interface for threads will consist of two functions, `yield` and `fork`, together with a class that serves as a scheduler: 
+As a sneak preview, we can use effect handlers to define our own tiny library for cooperative lightweight threads. The programmer's interface for threads will consist of two functions, `yield` and `fork`, together with a class that serves as a scheduler: 
 
 ```cpp
 void yield();                          // Used by a thread to give up control
@@ -23,9 +23,9 @@ private:
 };
 ```
 
-The static member function `Start` initiates the scheduler with `f` as the body of the first thread. The function `Start` returns when all threads finish.
+The static member function `Start` initiates the scheduler with `f` as the body of the first thread, and returns when all threads finish.
 
-To implement the interface, we first define two **commands**, which are data structures used to enable communication between the client code and the handler. We implemnt `yield` and `fork` to invoke these commands. (The name of the class `OneShot` is supposed to remind the programmer that we're dealing with one-shot handlers only, meaning you cannot resume the same resumption twice). 
+To implement this interface, we first define two **commands**, which are data structures used to enable communication between the client code and the handler. We implemnt `yield` and `fork` to invoke these commands. (The name of the class `OneShot` is supposed to remind the programmer that we're dealing with one-shot handlers only, meaning you cannot resume the same resumption twice). 
 
 ```cpp
 #include "cpp-effects/cpp-effects.h"
@@ -50,7 +50,7 @@ void fork(std::function<void()> proc)
 }
 ```
 
-We define the scheduler, which is a **handler** that can handle the two commands:
+We define the scheduler, which is a **handler** that can handle the two commands by pushing the resumptions to the queue.
 
 ```cpp
 // Res is the type of suspended threads
@@ -88,7 +88,7 @@ private:
 std::list<Res> Scheduler::queue;
 ```
 
-Now, we start the scheduler with an initial thread:
+Now, we can test the library by starting a few threads:
 
 ```cpp
 void worker(int k)
