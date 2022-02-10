@@ -43,7 +43,7 @@ using Res = std::unique_ptr<Resumption<void, void>>;
 
 class Scheduler : public Handler<void, void, Yield, Fork> {
 public:
-  static void Start(const std::function<void()>& f)
+  static void Start(std::function<void()> f)
   {
     Run(f);
     while (!queue.empty()) { // Round-robin scheduling
@@ -54,7 +54,7 @@ public:
   }
 private:
   static std::list<Res> queue;
-  static void Run(const std::function<void()>& f)
+  static void Run(std::function<void()> f)
   {
     OneShot::Handle<Scheduler>(f);
   }

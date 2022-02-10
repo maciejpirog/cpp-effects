@@ -7,34 +7,25 @@ A library for programming with effect handlers in C++
 
 The library relies on modern C++ features (move semantics, variadic templates, compile-time evaluation) to achieve elegant programmer-level interface, memory management of handlers, and relative type-safety. Internally, it uses the [boost::context](https://www.boost.org/doc/libs/1_74_0/libs/context/doc/html/index.html) library for call-stack manipulation, and so it implements one-shot handlers only.
 
-## Technical summary
-
-- **Language:** C++17
-- **Handlers**: deep, one-shot, parametrised [1]
-
-[1] - In the library handlers are objects, so they can naturally contain any data, auxiliary functions, and additional programmer's interface.
-
-## Compilation
-
-The easiest way to compile the library and the examples is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
-
-```bash
-$ brew install cmake
-$ brew install boost
-$ cmake .
-$ make
-```
-
-This will build the library and the examples. You can check that it works by running an example. The following will run the `threads` example - you can see the interleaving of threads in the output:
-
-```bash
-$ bin/threads
-01021032104321043210432104321043210432104321432434
-```
-
 ## A quick example: lightweight cooperative threads
 
-Here's a sneak preview of the implementation of the `threads` example (cooperative lightweight threads). We define two **commands** together with a functional interface to invoke them. The name of the class `OneShot` is supposed to remind the programmer that we're dealing with one-shot handlers only (meaning you cannot resume the same resumption twice). 
+Here's a sneak preview of how one can use the library to define their own simple cooperative lightweight threads with a scheduler. The programmer's interface for threads will consist of two functions, `yield` and `fork`, together with a class that serves as a scheduler: 
+
+```cpp
+void yield();                          // Used by a thread to give up control
+void fork(std::function<void()> proc); // Start a new thread
+
+class Scheduler {
+public:
+  static void Start(std::function<void()> f)
+private:
+  ...
+};
+```
+
+The static member function `Start` initiates the scheduler with `f` as the body of the first thread. The function `Start` returns when all threads finish.
+
+To implement the interface, we first define two **commands**, which are data structures used to enable communication between the client code and the handler. We implemnt `yield` and `fork` to invoke these commands. (The name of the class `OneShot` is supposed to remind the programmer that we're dealing with one-shot handlers only, meaning you cannot resume the same resumption twice). 
 
 ```cpp
 #include "cpp-effects/cpp-effects.h"
@@ -59,7 +50,7 @@ void fork(std::function<void()> proc)
 }
 ```
 
-We define the scheduler, which is a **handler** that can handle the two commands (as can be seen in its type):
+We define the scheduler, which is a **handler** that can handle the two commands:
 
 ```cpp
 // Res is the type of suspended threads
@@ -97,7 +88,7 @@ private:
 std::list<Res> Scheduler::queue;
 ```
 
-Now, we just start the scheduler with some initial thread:
+Now, we start the scheduler with an initial thread:
 
 ```cpp
 void worker(int k)
@@ -122,4 +113,29 @@ int main()
   // Output:
   // 01021032104321043210432104321043210432104321432434
 }
+```
+
+## Technical summary
+
+- **Language:** C++17
+- **Handlers**: deep, one-shot, parametrised [1]
+
+[1] - In the library handlers are objects, so they can naturally contain any data, auxiliary functions, and additional programmer's interface.
+
+## Build
+
+The easiest way to compile the library and the examples is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
+
+```bash
+$ brew install cmake
+$ brew install boost
+$ cmake .
+$ make
+```
+
+This will build the library and the examples. You can check that it works by running an example. The following will run the `threads` example - you can see the interleaving of threads in the output:
+
+```bash
+$ bin/threads
+01021032104321043210432104321043210432104321432434
 ```
