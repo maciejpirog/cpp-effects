@@ -7,9 +7,13 @@ A library for programming with effect handlers in C++
 
 The library relies on modern C++ features (move semantics, variadic templates, compile-time evaluation) to achieve elegant programmer-level interface, memory management of handlers, and relative type-safety. Internally, it uses the [boost::context](https://www.boost.org/doc/libs/1_74_0/libs/context/doc/html/index.html) library for call-stack manipulation, and so it implements one-shot handlers only.
 
+## Documentation
+
+More detailed documentation coming soon...
+
 ## A quick example: lightweight cooperative threads
 
-As a sneak preview, we can use effect handlers to define our own tiny library for cooperative lightweight (threads)[example/threads.cpp]. The programmer's interface will consist of two functions, `yield` and `fork`, together with a class that implements a scheduler: 
+As a sneak preview, we can use effect handlers to define our own tiny library for cooperative lightweight threads. The programmer's interface will consist of two functions, `yield` and `fork`, together with a class that implements a scheduler: 
 
 ```cpp
 void yield();                          // Used by a thread to give up control
