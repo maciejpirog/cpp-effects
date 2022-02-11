@@ -9,7 +9,7 @@ The library relies on modern C++ features (move semantics, variadic templates, c
 
 ## A quick example: lightweight cooperative threads
 
-As a sneak preview, we can use effect handlers to define our own tiny library for cooperative lightweight (threads)[example/threads.cpp]. The programmer's interface will consist of two functions, `yield` and `fork`, together with a class that implements a scheduler: 
+As a sneak preview, we can use effect handlers to define our own tiny library for cooperative lightweight [threads](example/threads.cpp). The programmer's interface will consist of two functions, `yield` and `fork`, together with a class that implements a scheduler: 
 
 ```cpp
 void yield();                          // Used by a thread to give up control
