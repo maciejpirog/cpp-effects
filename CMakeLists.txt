@@ -12,7 +12,7 @@ add_compile_options (-Wall -Wextra -pedantic -Werror -O3)
 
 # For local boost:
 # set (BOOST_ROOT <boost-directory>)
-FIND_PACKAGE (Boost 1.76 COMPONENTS context REQUIRED)
+FIND_PACKAGE (Boost 1.70 COMPONENTS context REQUIRED)
 
 if (Boost_FOUND)
   add_subdirectory (src)
