@@ -56,7 +56,7 @@ struct Tangible<void> {
 // ------------------------------
 
 class OneShot;
-struct MetaframeBase;
+class MetaframeBase;
 class InitMetastack;
 
 // --------
@@ -72,18 +72,19 @@ struct Command {
 // Resumptions
 // -----------
 
-struct ResumptionBase {
-  virtual void TailResume() = 0;
+class ResumptionBase {
+  friend class OneShot;
+public:
   virtual ~ResumptionBase() { }
+protected:
+  virtual void TailResume() = 0;
 };
 
 template <typename Out, typename Answer>
 class Resumption : public ResumptionBase {
   friend class OneShot;
   template <typename, typename, typename...> friend struct Metaframe;
-  template <typename, typename> friend struct CmdClause;
-public:
-  ~Resumption() { }
+  template <typename, typename> friend class CmdClause;
 protected:
   Resumption() { }
   std::list<MetaframeBase*> storedMetastack;
@@ -97,7 +98,6 @@ class PlainResumption : public Resumption<Out, Answer> {
   friend class OneShot;
   const std::function<Answer(Out)> func;
   PlainResumption(const std::function<Answer(Out)>& func) : func(func) { }
-  virtual ~PlainResumption() { }
   virtual Answer Resume() override;
   virtual void TailResume() override;
 };
@@ -107,7 +107,6 @@ class PlainResumption<void, Answer> : public Resumption<void, Answer> {
   friend class OneShot;
   const std::function<Answer()> func;
   PlainResumption(const std::function<Answer()>& func) : func(func) { }
-  virtual ~PlainResumption() { }
   virtual Answer Resume() override;
   virtual void TailResume() override;
 };
@@ -148,12 +147,18 @@ struct Transfer : TransferBase {
 // >0  -- user-defined labels
 // <0  -- auto-generated labels
 
-struct MetaframeBase {
-  MetaframeBase() = default;
-  MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds) { }
+class MetaframeBase {
+  friend class OneShot;
+  template <typename, typename> friend class CmdClause;
+  friend class InitMetastack;
+  template <typename, typename> friend class Resumption; 
+public:
   virtual ~MetaframeBase() { }
   void DebugPrint() const { std::cout << "[" << label << "," << (bool)fiber << "]"; }
   const std::vector<std::type_index> handledCmds;
+protected:
+  MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds) { }
+  MetaframeBase() = default;
   int64_t label;
   ctx::fiber fiber;
 };
@@ -164,18 +169,19 @@ struct MetaframeBase {
 // need the "Answer" type.
 
 template <typename Cmd>
-struct CanInvokeCmdClause {
+class CanInvokeCmdClause {
+  friend class OneShot;
+protected:
   virtual typename Cmd::OutType InvokeCmd(
     std::list<MetaframeBase*>::reverse_iterator it, Cmd&& cmd) = 0;
 };
 
 template <typename Answer, typename Cmd>
-using CmdClauseType =
-  Answer(Cmd, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>);
-
-template <typename Answer, typename Cmd>
-struct CmdClause : public CanInvokeCmdClause<Cmd> {
-  virtual CmdClauseType<Answer, Cmd> CommandClause = 0;
+class CmdClause : public CanInvokeCmdClause<Cmd> {
+  friend class OneShot;
+protected:
+  virtual Answer CommandClause(Cmd, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>) = 0;
+private:
   virtual typename Cmd::OutType InvokeCmd(
     std::list<MetaframeBase*>::reverse_iterator it, Cmd&& cmd) override;
 };
@@ -192,7 +198,6 @@ struct CmdClause : public CanInvokeCmdClause<Cmd> {
 template <typename Answer, typename Body, typename... Cmds>
 class Handler : public MetaframeBase, public CmdClause<Answer, Cmds>... {
   friend class OneShot;
-  using CmdClause<Answer, Cmds>::InvokeCmd...;
   using CmdClause<Answer, Cmds>::CommandClause...;
 public:
   using AnswerType = Answer;
@@ -208,7 +213,6 @@ private:
 template <typename Answer, typename... Cmds>
 class Handler<Answer, void, Cmds...> : public MetaframeBase, public CmdClause<Answer, Cmds>... {
   friend class OneShot;
-  using CmdClause<Answer, Cmds>::InvokeCmd...;
   using CmdClause<Answer, Cmds>::CommandClause...;
 public:
   using AnswerType = Answer;
