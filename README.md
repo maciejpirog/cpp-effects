@@ -22,8 +22,6 @@ void fork(std::function<void()> proc); // Start a new thread
 class Scheduler {
 public:
   static void Start(std::function<void()> f);
-private:
-  ...
 };
 ```
 
