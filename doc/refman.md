@@ -2,15 +2,15 @@
 
 ## Overview
 
-Header: `cpp-effects/cpp-effects.h`. 
+Header: `cpp-effects/cpp-effects.h`
 
-Namespace: `CppEffects`.
+Namespace: `CppEffects`
 
 The classes in the interface of the library are:
 
-- `Command` - Classes derived from it define commands.
+- `Command` - Classes derived from `Command` define commands.
 
-- `Handler` - Classes derived from it define handlers.
+- `Handler` - Classes derived from `Handler` define handlers.
 
 - `Resumption` - The class for suspended computations that are given to the user in handlers' command clauses.
 
@@ -154,7 +154,7 @@ class Resumption : public ResumptionBase
 
 ## class `CmdClause`
 
-A class for a command clause for a single command in a handler. A handler can inherit from a few `CmdClause`'s to be able to handle multiple commands.
+The class for a command clause for a single command in a handler. A handler can inherit from a few `CmdClause`'s to be able to handle multiple commands.
 
 ```cpp
 template <typename Answer, typename Cmd>
