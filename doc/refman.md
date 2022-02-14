@@ -171,7 +171,7 @@ protected:
 
 #### CommandClause
 
-```
+```cpp
 virtual Answer CommandClause(Cmd c, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>> r);
 ```
 
