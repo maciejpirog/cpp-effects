@@ -160,6 +160,7 @@ protected:
   MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds) { }
   MetaframeBase() = default;
   int64_t label;
+private:
   ctx::fiber fiber;
 };
 
@@ -203,6 +204,7 @@ public:
   using AnswerType = Answer;
   using BodyType = Body;
   Handler() : MetaframeBase({typeid(Cmds)...}) {}
+protected:
   virtual Answer ReturnClause(Body b) = 0;
 private:
   Answer RunReturnClause(Tangible<Body> b) { return ReturnClause(std::move(b.value)); }
@@ -218,6 +220,7 @@ public:
   using AnswerType = Answer;
   using BodyType = void;
   Handler() : MetaframeBase({typeid(Cmds)...}) {}
+protected:
   virtual Answer ReturnClause() = 0;
 private:
   Answer RunReturnClause(Tangible<void>) { return ReturnClause(); }
