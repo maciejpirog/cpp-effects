@@ -107,8 +107,17 @@ private:
   {
     return v;
   }
-}
+};
 ```
+
+To handle a computation, one needs to create a new object of the derived class:
+
+```cpp
+auto body = [](){ return put(get() + 1); } 
+OneShot::HandleWith(body, std::make_unique<State<int>>(10)); // returns 11
+```
+
+The lifetime of this object is managed by the library: it is deleted when the handled computation returns a value or a resumption that contains this handler is discontinued (e.g. is not resumed in a command clause).
 
 ## class `Command`
 
@@ -123,7 +132,7 @@ struct Command {
 
 - `typename Out` - The return type when invoking the (derived) command (i.e., the return type of `OneShot::InvokeCmd`).
 
-#### OutType
+#### Command<Out>::OutType
 
 ```cpp
 using OutType = Out;
@@ -169,7 +178,7 @@ protected:
 - `typename Cmd` - The handled command (a class that inherits from `Command`).
 
 
-#### CommandClause
+#### CmdClause<Answer,Cmd>::CommandClause
 
 ```cpp
 virtual Answer CommandClause(Cmd c, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>> r);
@@ -216,7 +225,7 @@ protected:
 
 To define a handler for a set of commands, one needs to derive from `Handler` and specify the command clauses (inherited from `CmdClause`'s) and the return clause.
 
-#### AnswerType
+#### Handler<Answer, Body, Cmds...>::AnswerType
 
 ```cpp
 using AnswerType = Answer;
@@ -225,7 +234,7 @@ using AnswerType = Answer;
 Reveals the type of the overall answer of a handler.
 
 
-#### BodyType
+#### Handler<Answer, Body, Cmds...>::BodyType
 
 ```cpp
 using BodyType = Body;
@@ -233,7 +242,7 @@ using BodyType = Body;
 
 Reveals the type of the handled computation.
 
-#### ReturnCluase
+#### Handler<Answer, Body, Cmds...>::ReturnCluase
 
 ```cpp
 virtual Answer ReturnClause(Body b); // if Body != void
@@ -295,18 +304,19 @@ public:
   template <typename Answer>
   static Answer TailResume(std::unique_ptr<Resumption<void, Answer>> r);
 };
+```
 
-#### FreshLabel
+#### OneShot::FreshLabel
 
 ```cpp
 static int64_t FreshLabel();
 ```
 
-Generate a unique label for a handler, which can be used later with the overloads with `label` arguments.
+When a command is invoked, the handler is chosen based on the type of the operation using the usual "innermost" rule. However, one can use labels to directly match operations with handlers. The function `FreshLabel` generates a unique label, which can be used later with the overloads with `label` arguments.
 
 - **Return value** `int64_t` - The generated label.
 
-#### Handle
+#### OneShot::Handle
 
 ```cpp
 template <typename H>
@@ -328,7 +338,7 @@ Create a new handler of type `H` (using its trivial constructor) and use it to h
 
 Note: `OneShot::Handle<H>(b)` is equivalent to `OneShot::Handle(b, std::make_unique<H>())`.
 
-#### HandleWith
+#### OneShot::HandleWith
 
 ```cpp
   template <typename H>
@@ -352,7 +362,7 @@ Hadle the computation `body` using the given handler of type `H`.
 
 - **Return value** `H::AnswerType` - The final answer of the handler, returned by one of the overloads of `H::CommandClause` or `H::ReturnClause`.
 
-#### InvokeCmd
+#### OneShot::InvokeCmd
 
 ```cpp
 template <typename Cmd>
@@ -372,7 +382,7 @@ Used in a handled computation to invoke a particular command. The current comput
 
 - **Return value** `Cmd::OutType` - the value with which the suspended computation is resumed (the argument to `OneShot::Resume`).
 
-#### MakeResumption
+#### OneShot::MakeResumption
 
 ```cpp
 template <typename Out, typename Answer>
@@ -395,7 +405,7 @@ Lift a function to a resumption.
 
 - **Return value** `std::unique_ptr<Resumption<Out, Answer>>` - the resulting resumption.
 
-#### Resume
+#### OneShot::Resume
 
 ```cpp
 template <typename Out, typename Answer>
@@ -418,7 +428,7 @@ Resume a resumption.
 
 - **Return value** `Answer` - The result of the resumed computation.
 
-#### TailResume
+#### OneShot::TailResume
 
 ```cpp
 template <typename Out, typename Answer>
