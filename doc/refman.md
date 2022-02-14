@@ -378,7 +378,7 @@ Used in a handled computation to invoke a particular command. The current comput
 template <typename Out, typename Answer>
 static std::unique_ptr<Resumption<Out, Answer>> MakeResumption(std::function<Answer(Out)> func);
 
-\\ overload for Out == void
+// overload for Out == void
 template <typename Answer>
 static std::unique_ptr<Resumption<void, Answer>> MakeResumption(std::function<Answer()> func);
 ```
@@ -401,7 +401,7 @@ Lift a function to a resumption.
 template <typename Out, typename Answer>
 static Answer Resume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult);
 
-\\ overload for Out == void
+// overload for Out == void
 template <typename Answer>
 static Answer Resume(std::unique_ptr<Resumption<void, Answer>> r);
 ```
@@ -424,7 +424,7 @@ Resume a resumption.
 template <typename Out, typename Answer>
 static Answer TailResume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult);
 
-\\ overload for Out == void
+// overload for Out == void
 template <typename Answer>
 static Answer TailResume(std::unique_ptr<Resumption<void, Answer>> r);
 ```
