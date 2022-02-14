@@ -180,7 +180,7 @@ protected:
 - `typename Cmd` - The handled command (a class that inherits from `Command`).
 
 
-#### :large_orange_diamond:CmdClause<Answer,Cmd>::CommandClause
+#### :large_orange_diamond: CmdClause<Answer,Cmd>::CommandClause
 
 ```cpp
 virtual Answer CommandClause(Cmd c, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>> r);
