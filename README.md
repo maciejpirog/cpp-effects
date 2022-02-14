@@ -9,7 +9,9 @@ The library relies on modern C++ features (move semantics, variadic templates, c
 
 ## Documentation
 
-More detailed documentation coming soon...
+- [Reference](doc/refman.md) - A detailed explanation of the library's API and a short discussion about the overall design of the library. A suitable introduction if the reader is alredy familiar with effect handlers (for example, as they are usually discussed in the context of functional programming).
+
+- Coming soon: Tutorial - An introduction to programming with effect handlers. Suitable for readers not familiar with handlers.
 
 ## A quick example: lightweight cooperative threads
 
