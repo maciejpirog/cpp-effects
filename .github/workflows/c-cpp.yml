@@ -19,6 +19,9 @@ jobs:
       run: cmake .
     - name: make
       run: make
-    - name: threads
-      run: bin/threads
+    - name: examples
+      run: bin/threads && bin/actors && bin/async-await && bin/generators && bin/rollback-state
+    - name: tests
+      run: bin/test/traits
+
       
