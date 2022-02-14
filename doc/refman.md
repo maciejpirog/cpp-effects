@@ -465,3 +465,17 @@ In this example, we will build up the call stack until the entire handler return
 - `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
 
 - **Return value** `Answer` - The result of the resumed computation.
+
+**NOTE:** `TailResume` can be used only if `Answer` is copy- and trivially constructible. Consider the following command clause:
+
+```cpp
+class H : Handler<Answer, void, Op> {
+  // ...
+  Answer CommandClause(Op, std::unique_ptr<Resumption<void, Answer>> r) override
+  {
+    return OneShot::TailResume(std::move(r));
+  }
+}
+```
+
+What happens behind the scenes is that `TailResume` returns a trivial value of type `Answer`, while the real resuming happens in a trampoline hidden in the implementation of `OneShot`.

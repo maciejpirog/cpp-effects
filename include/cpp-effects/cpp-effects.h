@@ -40,9 +40,9 @@ namespace ctx = boost::context;
 template <typename T>
 struct Tangible {
   T value;
-  Tangible() = default;
+  Tangible() = delete;
   Tangible(T&& t) : value(std::move(t)) { }
-  Tangible(const std::function<T()>& f) { value = f(); }
+  Tangible(const std::function<T()>& f) : value(f()) { }
 };
 
 template <>
@@ -88,7 +88,7 @@ class Resumption : public ResumptionBase {
 protected:
   Resumption() { }
   std::list<MetaframeBase*> storedMetastack;
-  Tangible<Out> cmdResultTransfer; // Used to transfer data between fibers
+  std::optional<Tangible<Out>> cmdResultTransfer; // Used to transfer data between fibers
   virtual Answer Resume();
   virtual void TailResume() override;
 };
@@ -131,7 +131,7 @@ struct Transfer : TransferBase {
   Tangible<A> value;
   A GetValue()
   {
-    Tangible<A> temp = std::move(value);
+    Tangible<A> temp(std::move(value));
     delete this;
     return std::move(temp.value);
   }
@@ -300,26 +300,24 @@ public:
       // clause is executed in the same fiber, but it cannot use
       // commands of the handler.
       Metastack.back()->label = -1;
-      Tangible<typename H::AnswerType> a;
       if constexpr (!std::is_void<typename H::AnswerType>::value) {
-        a.value = static_cast<H*>(Metastack.back())->RunReturnClause(std::move(b));
-      } else {
-        static_cast<H*>(Metastack.back())->RunReturnClause(std::move(b));
-      }
-      delete Metastack.back();
-      Metastack.pop_back();
-      if constexpr (!std::is_void<typename H::AnswerType>::value) {
+        typename H::AnswerType a(
+          static_cast<H*>(Metastack.back())->RunReturnClause(std::move(b)));
+        delete Metastack.back();
+        Metastack.pop_back();
         std::move(Metastack.back()->fiber).resume_with(
             [&](ctx::fiber&& /*thisHandler*/) -> ctx::fiber {
           // Here is the end of life of this handler's body: "thisHandler" goes
           // out of scope and the fiber is destroyed.
-          OneShot::transferBuffer = new Transfer<typename H::AnswerType>(std::move(a.value));
+          OneShot::transferBuffer = new Transfer<typename H::AnswerType>(std::move(a));
           return ctx::fiber();
         });
       } else {
+        static_cast<H*>(Metastack.back())->RunReturnClause(std::move(b));
+        delete Metastack.back();
+        Metastack.pop_back();
         std::move(Metastack.back()->fiber).resume();
       }
-
       // This will never be reached, because this fiber will have been destroyed.
       std::cerr << "error: malformed handler\n";
       exit(-1);
@@ -392,7 +390,7 @@ public:
   template <typename Out, typename Answer>
   static Answer Resume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult)
   {
-    r->cmdResultTransfer.value = std::move(cmdResult);
+    r->cmdResultTransfer->value = std::move(cmdResult);
     return r.release()->Resume();
   }
 
@@ -405,7 +403,7 @@ public:
   template <typename Out, typename Answer>
   static Answer TailResume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult)
   {
-    r->cmdResultTransfer.value = std::move(cmdResult);
+    r->cmdResultTransfer->value = std::move(cmdResult);
     // Trampoline back to Handle
     tailAnswer = TailAnswer{r.release()};
     if constexpr (!std::is_void<Answer>::value) {
@@ -493,7 +491,7 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   // being resumed at the moment, and so we no longer need the
   // resumption object, because the fiber is no longer valid.
   if constexpr (!std::is_void<typename Cmd::OutType>::value) {
-    typename Cmd::OutType cmdResult = std::move(resumption->cmdResultTransfer.value);
+    typename Cmd::OutType cmdResult = std::move(resumption->cmdResultTransfer->value);
     delete resumption;
     return cmdResult;
   } else {
@@ -537,7 +535,7 @@ void Resumption<Out, Answer>::TailResume()
 template <typename Out, typename Answer>
 Answer PlainResumption<Out, Answer>::Resume()
 {
-  auto ans = std::move(this->cmdResultTransfer.value);
+  auto ans = std::move(this->cmdResultTransfer->value);
   auto f = func;
   delete this;
   if constexpr (!std::is_void<Answer>::value) {
@@ -556,9 +554,9 @@ void PlainResumption<Out, Answer>::TailResume()
   }
 
   if constexpr (!std::is_void<Answer>::value) {
-    OneShot::transferBuffer = new Transfer<Answer>(func(std::move(this->cmdResultTransfer.value)));
+    OneShot::transferBuffer = new Transfer<Answer>(func(std::move(this->cmdResultTransfer->value)));
   } else {
-    func(std::move(this->cmdResultTransfer.value));
+    func(std::move(this->cmdResultTransfer->value));
   }
   delete this;
 }
