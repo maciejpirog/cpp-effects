@@ -46,7 +46,7 @@ void put(int v) {
   OneShot::InvokeCmd(Put{{}, v});
 }
 int get() {
-  OneShot::InvokeCmd(Get{});
+  return OneShot::InvokeCmd(Get{});
 }
 ```
 
