@@ -134,7 +134,7 @@ struct Command {
 
 **NOTE:** A class derived from `Command` can be used as a command if it is at least copy-constructible.
 
-#### Command<Out>::OutType
+#### :large_orange_diamond: Command<Out>::OutType
 
 ```cpp
 using OutType = Out;
@@ -180,7 +180,7 @@ protected:
 - `typename Cmd` - The handled command (a class that inherits from `Command`).
 
 
-#### CmdClause<Answer,Cmd>::CommandClause
+#### :large_orange_diamond:CmdClause<Answer,Cmd>::CommandClause
 
 ```cpp
 virtual Answer CommandClause(Cmd c, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>> r);
@@ -227,7 +227,7 @@ protected:
 
 To define a handler for a set of commands, one needs to derive from `Handler` and specify the command clauses (inherited from `CmdClause`'s) and the return clause.
 
-#### Handler<Answer, Body, Cmds...>::AnswerType
+#### :large_orange_diamond: Handler<Answer, Body, Cmds...>::AnswerType
 
 ```cpp
 using AnswerType = Answer;
@@ -236,7 +236,7 @@ using AnswerType = Answer;
 Reveals the type of the overall answer of a handler.
 
 
-#### Handler<Answer, Body, Cmds...>::BodyType
+#### :large_orange_diamond: Handler<Answer, Body, Cmds...>::BodyType
 
 ```cpp
 using BodyType = Body;
@@ -244,7 +244,7 @@ using BodyType = Body;
 
 Reveals the type of the handled computation.
 
-#### Handler<Answer, Body, Cmds...>::ReturnCluase
+#### :large_orange_diamond: Handler<Answer, Body, Cmds...>::ReturnCluase
 
 ```cpp
 virtual Answer ReturnClause(Body b); // if Body != void
@@ -308,7 +308,7 @@ public:
 };
 ```
 
-#### OneShot::FreshLabel
+#### :large_orange_diamond: OneShot::FreshLabel
 
 ```cpp
 static int64_t FreshLabel();
@@ -318,7 +318,7 @@ When a command is invoked, the handler is chosen based on the type of the operat
 
 - **Return value** `int64_t` - The generated label.
 
-#### OneShot::Handle
+#### :large_orange_diamond: OneShot::Handle
 
 ```cpp
 template <typename H>
@@ -340,7 +340,7 @@ Create a new handler of type `H` (using its trivial constructor) and use it to h
 
 Note: `OneShot::Handle<H>(b)` is equivalent to `OneShot::Handle(b, std::make_unique<H>())`.
 
-#### OneShot::HandleWith
+#### :large_orange_diamond: OneShot::HandleWith
 
 ```cpp
   template <typename H>
@@ -364,7 +364,7 @@ Hadle the computation `body` using the given handler of type `H`.
 
 - **Return value** `H::AnswerType` - The final answer of the handler, returned by one of the overloads of `H::CommandClause` or `H::ReturnClause`.
 
-#### OneShot::InvokeCmd
+#### :large_orange_diamond: OneShot::InvokeCmd
 
 ```cpp
 template <typename Cmd>
@@ -384,7 +384,7 @@ Used in a handled computation to invoke a particular command. The current comput
 
 - **Return value** `Cmd::OutType` - the value with which the suspended computation is resumed (the argument to `OneShot::Resume`).
 
-#### OneShot::MakeResumption
+#### :large_orange_diamond: OneShot::MakeResumption
 
 ```cpp
 template <typename Out, typename Answer>
@@ -407,7 +407,7 @@ Lift a function to a resumption.
 
 - **Return value** `std::unique_ptr<Resumption<Out, Answer>>` - the resulting resumption.
 
-#### OneShot::Resume
+#### :large_orange_diamond: OneShot::Resume
 
 ```cpp
 template <typename Out, typename Answer>
@@ -430,7 +430,7 @@ Resume a resumption.
 
 - **Return value** `Answer` - The result of the resumed computation.
 
-#### OneShot::TailResume
+#### :large_orange_diamond: OneShot::TailResume
 
 ```cpp
 template <typename Out, typename Answer>
