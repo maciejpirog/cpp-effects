@@ -301,23 +301,15 @@ public:
       // commands of the handler.
       Metastack.back()->label = -1;
       if constexpr (!std::is_void<typename H::AnswerType>::value) {
-        typename H::AnswerType a(
+        OneShot::transferBuffer = new Transfer<typename H::AnswerType>(
           static_cast<H*>(Metastack.back())->RunReturnClause(std::move(b)));
-        delete Metastack.back();
-        Metastack.pop_back();
-        std::move(Metastack.back()->fiber).resume_with(
-            [&](ctx::fiber&& /*thisHandler*/) -> ctx::fiber {
-          // Here is the end of life of this handler's body: "thisHandler" goes
-          // out of scope and the fiber is destroyed.
-          OneShot::transferBuffer = new Transfer<typename H::AnswerType>(std::move(a));
-          return ctx::fiber();
-        });
       } else {
         static_cast<H*>(Metastack.back())->RunReturnClause(std::move(b));
-        delete Metastack.back();
-        Metastack.pop_back();
-        std::move(Metastack.back()->fiber).resume();
       }
+      delete Metastack.back();
+      Metastack.pop_back();
+      std::move(Metastack.back()->fiber).resume();
+      
       // This will never be reached, because this fiber will have been destroyed.
       std::cerr << "error: malformed handler\n";
       exit(-1);
