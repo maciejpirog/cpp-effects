@@ -59,7 +59,7 @@ struct Command {
 };
 
 template <typename Cmd>
-static typename Cmd::OutType OneShot::InvokeCmd(Cmd&& cmd);
+static typename Cmd::OutType OneShot::InvokeCmd(const Cmd&);
 ```
 
 #### Resumptions
@@ -130,7 +130,9 @@ struct Command {
 };
 ```
 
-- `typename Out` - The return type when invoking the (derived) command (i.e., the return type of `OneShot::InvokeCmd`).
+- `typename Out` - The return type when invoking the (derived) command (i.e., the return type of `OneShot::InvokeCmd`). Should be at least move-constructible and move-assignable.
+
+**NOTE:** A class derived from `Command` can be used as a command if it is at least copy-constructible.
 
 #### Command<Out>::OutType
 
@@ -173,7 +175,7 @@ protected:
 };
 ```
 
-- `typename Answer` - The overall answer type of a handler that inherits from a particular `CmdClause`.
+- `typename Answer` - The overall answer type of a handler that inherits from a particular `CmdClause`. Should be at least move-constructible.
 
 - `typename Cmd` - The handled command (a class that inherits from `Command`).
 
@@ -217,9 +219,9 @@ protected:
 };
 ```
 
-- `typename Answer` - The overall answer type of a derived handler.
+- `typename Answer` - The overall answer type of a derived handler. Should be at least move-constructible.
 
-- `typename Body` - The type of the handled computation.
+- `typename Body` - The type of the handled computation. Should be at least move-constructible.
 
 - `typename... Cmds` - The commands that are handled by this handler.
 
@@ -281,10 +283,10 @@ public:
     int64_t label, std::function<typename H::BodyType()> body, std::unique_ptr<H> handler);
 	
   template <typename Cmd>
-  static typename Cmd::OutType InvokeCmd(Cmd&& cmd);
+  static typename Cmd::OutType InvokeCmd(const Cmd& cmd);
   
   template <typename Cmd>
-  static typename Cmd::OutType InvokeCmd(int64_t label, Cmd&& cmd);
+  static typename Cmd::OutType InvokeCmd(int64_t label, const Cmd& cmd);
   
   template <typename Out, typename Answer>
   static std::unique_ptr<Resumption<Out, Answer>> MakeResumption(std::function<Answer(Out)> func);
@@ -366,10 +368,10 @@ Hadle the computation `body` using the given handler of type `H`.
 
 ```cpp
 template <typename Cmd>
-static typename Cmd::OutType InvokeCmd(Cmd&& cmd);
+static typename Cmd::OutType InvokeCmd(const Cmd& cmd);
   
 template <typename Cmd>
-static typename Cmd::OutType InvokeCmd(int64_t label, Cmd&& cmd);
+static typename Cmd::OutType InvokeCmd(int64_t label, const Cmd& cmd);
 ```
 
 Used in a handled computation to invoke a particular command. The current computation (up  to and including the appropriate handler) is suspended, captured in a resumption, and the control goes to the handler.
@@ -378,7 +380,7 @@ Used in a handled computation to invoke a particular command. The current comput
 
 - `int64_t label` - The label of the handler to which the control should go. If there is no handler with label `label` in the context or it does not handle the operation `Cmd`, the program ends with exit code `-1`.
 
-- `Cmd&& cmd` - The invoked command.
+- `const Cmd& cmd` - The invoked command.
 
 - **Return value** `Cmd::OutType` - the value with which the suspended computation is resumed (the argument to `OneShot::Resume`).
 

@@ -174,7 +174,7 @@ class CanInvokeCmdClause {
   friend class OneShot;
 protected:
   virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframeBase*>::reverse_iterator it, Cmd&& cmd) = 0;
+    std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd) = 0;
 };
 
 template <typename Answer, typename Cmd>
@@ -184,7 +184,7 @@ protected:
   virtual Answer CommandClause(Cmd, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>) = 0;
 private:
   virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframeBase*>::reverse_iterator it, Cmd&& cmd) override;
+    std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd) override;
 };
 
 // --------
@@ -351,7 +351,7 @@ public:
   }
 
   template <typename Cmd>
-  static typename Cmd::OutType InvokeCmd(int64_t gotoHandler, Cmd&& cmd)
+  static typename Cmd::OutType InvokeCmd(int64_t gotoHandler, const Cmd& cmd)
   {
     // E.g. looking for d in [a][b][c][d][e][f][g.]
     // ===>
@@ -373,7 +373,7 @@ public:
     // point we cannot know what AnswerType and BodyType are.
     auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it);
     if (canInvoke) {
-      return canInvoke->InvokeCmd(it, std::forward<Cmd>(cmd));
+      return canInvoke->InvokeCmd(it, cmd);
     } else {
       std::cerr << "error: handler with id " << gotoHandler
                 << " does not handle " << typeid(Cmd).name() << std::endl;
@@ -382,9 +382,9 @@ public:
   }
 
   template <typename Cmd>
-  static typename Cmd::OutType InvokeCmd(Cmd&& cmd)
+  static typename Cmd::OutType InvokeCmd(const Cmd& cmd)
   {
-    return OneShot::InvokeCmd<Cmd>(0, std::forward<Cmd>(cmd));
+    return OneShot::InvokeCmd<Cmd>(0, cmd);
   }
 
   template <typename Out, typename Answer>
@@ -461,7 +461,7 @@ class InitMetastack {
 
 template <typename Answer, typename Cmd>
 typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
-  std::list<MetaframeBase*>::reverse_iterator it, Cmd&& cmd)
+  std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd)
 {
   auto jt = it.base();
   --jt;
@@ -476,12 +476,10 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
     if constexpr (!std::is_void<Answer>::value) {
       OneShot::transferBuffer = new Transfer<Answer>(
-        this->CommandClause(
-          std::forward<Cmd>(cmd),
+        this->CommandClause(cmd,
           std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>(resumption)));
     } else {
-      this->CommandClause(
-        std::forward<Cmd>(cmd),
+      this->CommandClause(cmd,
         std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>(resumption));
     }
     return ctx::fiber();
