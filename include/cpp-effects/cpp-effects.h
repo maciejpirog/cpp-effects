@@ -155,8 +155,8 @@ class MetaframeBase {
 public:
   virtual ~MetaframeBase() { }
   void DebugPrint() const { std::cout << "[" << label << "," << (bool)fiber << "]"; }
-  const std::vector<std::type_index> handledCmds;
 protected:
+  const std::vector<std::type_index> handledCmds;
   MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds) { }
   MetaframeBase() = default;
   int64_t label;
@@ -203,7 +203,7 @@ class Handler : public MetaframeBase, public CmdClause<Answer, Cmds>... {
 public:
   using AnswerType = Answer;
   using BodyType = Body;
-  Handler() : MetaframeBase({typeid(Cmds)...}) {}
+  Handler() : MetaframeBase({typeid(Cmds)...}) { }
 protected:
   virtual Answer ReturnClause(Body b) = 0;
 private:
@@ -219,7 +219,7 @@ class Handler<Answer, void, Cmds...> : public MetaframeBase, public CmdClause<An
 public:
   using AnswerType = Answer;
   using BodyType = void;
-  Handler() : MetaframeBase({typeid(Cmds)...}) {}
+  Handler() : MetaframeBase({typeid(Cmds)...}) { }
 protected:
   virtual Answer ReturnClause() = 0;
 private:
