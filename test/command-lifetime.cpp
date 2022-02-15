@@ -66,4 +66,4 @@ int main()
 // In handler: still using command id = 249
 // 249 dead
 
-// Note how catastrofic pass-by-reference would be in this example!
+// Note how catastrophic pass-by-reference would be in this example!
