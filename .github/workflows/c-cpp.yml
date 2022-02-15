@@ -22,5 +22,5 @@ jobs:
     - name: examples
       run: bin/threads && bin/actors && bin/async-await && bin/generators && bin/rollback-state
     - name: tests
-      run: bin/test/traits && bin/test/command-lifetime
+      run: bin/test/traits && bin/test/command-lifetime && bin/test/cut-out-the-middleman && bin/test/swap-handler
       

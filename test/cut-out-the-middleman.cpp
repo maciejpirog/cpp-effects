@@ -50,7 +50,7 @@ class HOuter : public Handler<void, void, PingOuter, CutMiddlemanAbet> {
   }
   void CommandClause(CutMiddlemanAbet a, std::unique_ptr<Resumption<void, void>>) override
   {
-    OneShot::Resume(std::unique_ptr<Resumption<void, void>>(a.res));
+    OneShot::TailResume(std::unique_ptr<Resumption<void, void>>(a.res));
   }
 
   void ReturnClause() override { }
@@ -84,6 +84,8 @@ void test1()
 // Inner!
 // C-
 // A-
+
+// ----------------------------------------------------------------
 
 // --
 // 2.
@@ -144,11 +146,11 @@ void test2()
 // 1
 // 101
 
-// -----------------------------
+// ----------------------------------------------------------------
 
 int main()
 {
   test1();
-  std::cout << "------------------" << std::endl;
+  std::cout << "-----------" << std::endl;
   test2();
 }

@@ -116,10 +116,10 @@ We can implement randomised scheduleing e.g. like this:
       std::advance(it, rand() % queue.size());
       auto resumption = std::move(*it);
       queue.erase(it);
-      OneShot::Resume(std::move(resumption), {});
+      OneShot::Resume(std::move(resumption));
     }
   }
 
-In which case the output is:
+In which case the output is something like:
 00001002134110400012112432132113322433334244424234
 */
