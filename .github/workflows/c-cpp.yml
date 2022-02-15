@@ -23,5 +23,5 @@ jobs:
       run: bin/threads && bin/actors && bin/async-await && bin/generators && bin/rollback-state
     - name: tests
       run: bin/test/traits
-
+      run: bin/test/command-lifetime
       
