@@ -6,10 +6,8 @@
 
 namespace CppEffects {
 
-std::list<MetaframeBase*> OneShot::Metastack;
 TransferBase* OneShot::transferBuffer;
 std::optional<TailAnswer> OneShot::tailAnswer = {};
-InitMetastack OneShot::im;
 int64_t OneShot::freshCounter = -2;
 
 }

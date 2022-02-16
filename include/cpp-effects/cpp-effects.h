@@ -162,8 +162,8 @@ public:
   }
 protected:
   const std::vector<std::type_index> handledCmds;
-  MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds) { }
-  MetaframeBase() = default;
+  MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds), label(0) { }
+  MetaframeBase() : label(0) { }
   int64_t label;
 private:
   ctx::fiber fiber;
@@ -252,8 +252,12 @@ class OneShot {
   friend class InitMetastack;
 
 public:
-  static std::list<MetaframeBase*> Metastack;
-  static InitMetastack im; // No static constructors in C++, hence we do the usual trick
+  static std::list<MetaframeBase*>& Metastack()
+  {
+     static MetaframeBase initMetaframe;
+     static std::list<MetaframeBase*> metastack{&initMetaframe};
+     return metastack;
+  };
   static TransferBase* transferBuffer;
   static std::optional<TailAnswer> tailAnswer;
   static int64_t freshCounter;
@@ -263,7 +267,7 @@ public:
   static void DebugPrintMetastack()
   {
     std::cerr << "metastack: ";
-    for (auto x : Metastack) { x->DebugPrint(); }
+    for (auto x : Metastack()) { x->DebugPrint(); }
     std::cerr << std::endl;
   }
 
@@ -295,25 +299,25 @@ public:
     // ctx::protected_fixedsize_stack pf(10000000);
     ctx::fiber bodyFiber{/*std::alocator_arg, std::move(pf),*/
         [&](ctx::fiber&& prev) -> ctx::fiber&& {
-      Metastack.back()->fiber = std::move(prev);
+      Metastack().back()->fiber = std::move(prev);
       handler->label = label;
-      Metastack.push_back(handler.release());
+      Metastack().push_back(handler.release());
       Tangible<typename H::BodyType> b(body);
       // The rest of the fiber might live in a resumption, after
       // the caller is long gone, hence we cannot use arguments
       // of HandleWith by reference from now on. The return
       // clause is executed in the same fiber, but it cannot use
       // commands of the handler.
-      Metastack.back()->label = -1;
+      Metastack().back()->label = -1;
       if constexpr (!std::is_void<typename H::AnswerType>::value) {
         OneShot::transferBuffer = new Transfer<typename H::AnswerType>(
-          static_cast<H*>(Metastack.back())->RunReturnClause(std::move(b)));
+          static_cast<H*>(Metastack().back())->RunReturnClause(std::move(b)));
       } else {
-        static_cast<H*>(Metastack.back())->RunReturnClause(std::move(b));
+        static_cast<H*>(Metastack().back())->RunReturnClause(std::move(b));
       }
-      delete Metastack.back();
-      Metastack.pop_back();
-      std::move(Metastack.back()->fiber).resume();
+      delete Metastack().back();
+      Metastack().pop_back();
+      std::move(Metastack().back()->fiber).resume();
       
       // This will never be reached, because this fiber will have been destroyed.
       std::cerr << "error: malformed handler\n";
@@ -361,8 +365,8 @@ public:
           != mf->handledCmds.end()
         : mf->label == gotoHandler);
     };
-    auto it = std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
-    if (it == Metastack.rend()) {
+    auto it = std::find_if(Metastack().rbegin(), Metastack().rend(), cond);
+    if (it == Metastack().rend()) {
       std::cerr << "error: no handler for " << typeid(Cmd).name() << std::endl;
       DebugPrintMetastack();
       exit(-1);
@@ -441,23 +445,6 @@ public:
 
 }; // class OneShot
 
-class InitMetastack {
-  friend class OneShot;
-
-  InitMetastack()
-  {
-    // There is always at least one metaframe on the stack
-    auto mf = new MetaframeBase;
-    mf->label = 0;
-    OneShot::Metastack.push_back(mf);
-  }
-
-  ~InitMetastack()
-  {
-    for (auto i : OneShot::Metastack) { delete i; }
-  }
-};
-
 template <typename Answer, typename Cmd>
 typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd)
@@ -466,10 +453,10 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   --jt;
   auto resumption = new Resumption<typename Cmd::OutType, Answer>();
   resumption->storedMetastack.splice(
-    resumption->storedMetastack.begin(), OneShot::Metastack, jt, OneShot::Metastack.end());
+    resumption->storedMetastack.begin(), OneShot::Metastack(), jt, OneShot::Metastack().end());
   // at this point: [a][b][c]; stored stack = [d][e][f][g.]
   
-  std::move(OneShot::Metastack.back()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
+  std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
     // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
     resumption->storedMetastack.back()->fiber = std::move(prev); 
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
@@ -501,8 +488,8 @@ Answer Resumption<Out, Answer>::Resume()
 {
   std::move(this->storedMetastack.back()->fiber).resume_with(
       [&](ctx::fiber&& prev) -> ctx::fiber {
-    OneShot::Metastack.back()->fiber = std::move(prev);
-    OneShot::Metastack.splice(OneShot::Metastack.end(), this->storedMetastack);
+    OneShot::Metastack().back()->fiber = std::move(prev);
+    OneShot::Metastack().splice(OneShot::Metastack().end(), this->storedMetastack);
     return ctx::fiber();
   });
   
@@ -523,8 +510,8 @@ void Resumption<Out, Answer>::TailResume()
 
   std::move(this->storedMetastack.back()->fiber).resume_with(
       [&](ctx::fiber&& prev) -> ctx::fiber {
-    OneShot::Metastack.back()->fiber = std::move(prev);
-    OneShot::Metastack.splice(OneShot::Metastack.end(), this->storedMetastack);
+    OneShot::Metastack().back()->fiber = std::move(prev);
+    OneShot::Metastack().splice(OneShot::Metastack().end(), this->storedMetastack);
     return ctx::fiber();
   });
 }

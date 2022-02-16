@@ -89,7 +89,7 @@ public:
     return *this;
   }
   ~Generator()
-  {
+  {std::cout << "[kill generator]" << std::flush;
     if (result) { delete result.value().resumption; }
   }
   T Value() const
