@@ -59,6 +59,7 @@ typename H::AnswerType SwappableHandleWith(std::function<typename H::BodyType()>
     return OneShot::HandleWith([=](){
         return OneShot::Handle<Abet<H>>(body);
       },
+        //std::make_unique<Reader>(100));
       std::unique_ptr<H>(h));
   });
 }
@@ -108,14 +109,14 @@ int comp()
   std::cout << get() << std::endl;
   return 18;
 }
-/*
+
 int main()
 {
   std::cout <<
     SwappableHandleWith(comp, std::unique_ptr<ReaderType<int, int>>(new Reader<int, int>(100)))
     << std::endl;
 }
-*/
+
 // Output:
 // 100
 // 110
