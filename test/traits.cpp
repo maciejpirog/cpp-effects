@@ -240,6 +240,7 @@ void yTestOutType()
 
 int main()
 {
+  std::cout << "--- traits ---" << std::endl;
   testAnswerType();
   testAnswerTypeVoid();
   testBodyType();

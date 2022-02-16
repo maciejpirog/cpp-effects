@@ -53,6 +53,7 @@ void myComputation()
 
 int main()
 {
+  std::cout << "--- command-lifetime ---" << std::endl;
   OneShot::Handle<MyHandler>(myComputation);
 }
 

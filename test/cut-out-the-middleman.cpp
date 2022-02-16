@@ -150,6 +150,7 @@ void test2()
 
 int main()
 {
+  std::cout << "--- cut-out-the-middleman ---" << std::endl;
   test1();
   std::cout << "-----------" << std::endl;
   test2();
