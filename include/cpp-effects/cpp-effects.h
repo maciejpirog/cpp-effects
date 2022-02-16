@@ -154,7 +154,12 @@ class MetaframeBase {
   template <typename, typename> friend class Resumption; 
 public:
   virtual ~MetaframeBase() { }
-  void DebugPrint() const { std::cout << "[" << label << "," << (bool)fiber << "]"; }
+  void DebugPrint() const
+  {
+    std::cout << "[";
+    for (auto i : handledCmds) { std::cout << i.name() << ", "; }
+    std::cout << label << ", " << (bool)fiber << "]";
+  }
 protected:
   const std::vector<std::type_index> handledCmds;
   MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds) { }
@@ -257,9 +262,9 @@ public:
 
   static void DebugPrintMetastack()
   {
-    for (auto x : Metastack) {
-      x->DebugPrint();
-    }
+    std::cerr << "metastack: ";
+    for (auto x : Metastack) { x->DebugPrint(); }
+    std::cerr << std::endl;
   }
 
   template <typename H>
@@ -359,6 +364,7 @@ public:
     auto it = std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
     if (it == Metastack.rend()) {
       std::cerr << "error: no handler for " << typeid(Cmd).name() << std::endl;
+      DebugPrintMetastack();
       exit(-1);
     }
     // Now we rely on the virtual method of the metaframe, as at this
@@ -369,6 +375,7 @@ public:
     } else {
       std::cerr << "error: handler with id " << gotoHandler
                 << " does not handle " << typeid(Cmd).name() << std::endl;
+      DebugPrintMetastack();
       exit(-1);
     }
   }
