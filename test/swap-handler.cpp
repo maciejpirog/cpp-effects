@@ -59,7 +59,6 @@ typename H::AnswerType SwappableHandleWith(std::function<typename H::BodyType()>
     return OneShot::HandleWith([=](){
         return OneShot::Handle<Abet<H>>(body);
       },
-        //std::make_unique<Reader>(100));
       std::unique_ptr<H>(h));
   });
 }
@@ -123,3 +122,4 @@ int main()
 // 310
 // 310
 // 320
+// 18
