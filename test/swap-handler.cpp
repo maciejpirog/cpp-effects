@@ -112,7 +112,6 @@ int comp()
 
 int main()
 {
-  std::cout << "--- swap-handler ---" << std::endl;
   std::cout <<
     SwappableHandleWith(comp, std::unique_ptr<ReaderType<int, int>>(new Reader<int, int>(100)))
     << std::endl;
