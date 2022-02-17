@@ -170,9 +170,12 @@ private:
 };
 
 // When invoking a command in the client code, we know the type of the
-// command, but we cannot know the type of the handler, hence the
-// handler needs to inherit from CanInvokeCmdClause, which does not
-// need the "Answer" type.
+// command, but we cannot know the type of the handler. In particular,
+// we cannot know the answer type, hence we cannot simply up-cast the
+// found handler to the class Handler<...>. Instead, Handler inherits
+// (indirectly) from the class CanInvokeCmdClause, which allows us to
+// call appropriate command clause of the handler without knowing the
+// answer type.
 
 template <typename Cmd>
 class CanInvokeCmdClause {
@@ -181,6 +184,12 @@ protected:
   virtual typename Cmd::OutType InvokeCmd(
     std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd) = 0;
 };
+
+// CmdClause is a class that allows us to define a handler with a
+// command clause for a particular operation. It inherits from
+// CanInvokeCmd, and overrides InvokeCmd, which means that the user,
+// who cannot know the answer type of a handler, can call the command
+// clause of the handler anyway, by up-casting to CanInvokeCmdClause.
 
 template <typename Answer, typename Cmd>
 class CmdClause : public CanInvokeCmdClause<Cmd> {
@@ -451,18 +460,18 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
 {
   auto jt = it.base();
   --jt;
-  auto resumption = new Resumption<typename Cmd::OutType, Answer>();
+  auto resumption = new Resumption<typename Cmd::OutType, Answer>();  // See (NOTE) below
   resumption->storedMetastack.splice(
     resumption->storedMetastack.begin(), OneShot::Metastack(), jt, OneShot::Metastack().end());
   // at this point: [a][b][c]; stored stack = [d][e][f][g.]
   
   std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
     // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
-    resumption->storedMetastack.back()->fiber = std::move(prev); 
+    resumption->storedMetastack.back()->fiber = std::move(prev);      // (A)
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
     if constexpr (!std::is_void<Answer>::value) {
       OneShot::transferBuffer = new Transfer<Answer>(
-        this->CommandClause(cmd,
+        this->CommandClause(cmd,                                      // (B)
           std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>(resumption)));
     } else {
       this->CommandClause(cmd,
@@ -471,17 +480,58 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
     return ctx::fiber();
   });
 
-  // If the control reaches here, this means that the resumption is
+  // If the control reaches here, this means that the resumption is   // (C)
   // being resumed at the moment, and so we no longer need the
   // resumption object, because the fiber is no longer valid.
   if constexpr (!std::is_void<typename Cmd::OutType>::value) {
     typename Cmd::OutType cmdResult = std::move(resumption->cmdResultTransfer->value);
-    delete resumption;
+    delete resumption;                                                // (D)
     return cmdResult;
   } else {
     delete resumption;
   }
 }
+
+/* [NOTE] ... on memory management of resumptions
+
+The fact that call stacks are now first class objects introduces an
+interesting subtlety: one of the rare occasions when the code
+
+void foo() 
+{
+  auto p = new C();
+  ...
+  delete p;
+}
+
+is correct, while a local value or a local unique pointer is not!
+
+This is because we create a resumption, but the resumption contains a
+(unique!) pointer to the fiber in which InvokeCmd's frame lives
+[A]. Then, the resumption is given to the outside world as a unique
+pointer [B]. Technically, it is not a unique pointer, because the
+pointer "resumption" still lives in the suspended fiber, but it makes
+the intent clear: the user has to either delete the resumption or
+resume it once.
+
+If the user deletes the resumption, its destructor deletes the fiber,
+together with the "resumption" pointer. Everything is fine: both the
+resumption and the fiber are gone, and since the user had unique
+ownership of the resumption, and the resumption had unique ownership
+of the fiber, everything is tidy. But imagine that the resumption
+would be a local variable in InvokeCmd: In such a case, the destructor
+of the resumption deletes the fiber, which means that the stack is
+unwound, which means that the resumption's destructor is called,
+which... is being already called at the moment, which of course would
+lead to a disaster.
+
+If the user resumes the resumption, the control goes back to InvokeCmd
+[C]. The user gives up the ownership of the resumption, which means
+that "resumption" is now a truly unique pointer, and we can safely
+delete it [D], as it won't be needed any more. Because the resumption
+has unique ownership of the suspended fiber, there is no other way to
+resume the fiber than by resuming this particular resumption.
+*/
 
 template <typename Out, typename Answer>
 Answer Resumption<Out, Answer>::Resume()
