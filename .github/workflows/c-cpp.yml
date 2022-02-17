@@ -20,7 +20,7 @@ jobs:
     - name: make
       run: make
     - name: examples
-      run: bin/threads && bin/actors && bin/async-await && bin/generators && bin/rollback-state && bin/states
+      run: bin/threads && bin/actors && bin/async-await && bin/generators && bin/rollback-state && bin/state
     - name: tests
       run: bin/test/traits && bin/test/command-lifetime && bin/test/cut-out-the-middleman && bin/test/swap-handler && bin/test/global-from-handle
       
