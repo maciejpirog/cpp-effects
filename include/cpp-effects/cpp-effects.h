@@ -515,22 +515,24 @@ the intent clear: the user has to either delete the resumption or
 resume it once.
 
 If the user deletes the resumption, its destructor deletes the fiber,
-together with the "resumption" pointer. Everything is fine: both the
-resumption and the fiber are gone, and since the user had unique
-ownership of the resumption, and the resumption had unique ownership
-of the fiber, everything is tidy. But imagine that the resumption
-would be a local variable in InvokeCmd: In such a case, the destructor
-of the resumption deletes the fiber, which means that the stack is
-unwound, which means that the resumption's destructor is called,
-which... is being already called at the moment, which of course would
-lead to a disaster.
+and so the "resumption" pointer simply disappears. Everything is fine:
+both the resumption and the fiber are gone, and since the user had
+unique ownership of the resumption, and the resumption had unique
+ownership of the fiber, everything is tidy. But imagine what would
+happen if the resumption was a local variable in InvokeCmd: In such a
+case, the destructor of the resumption deletes the fiber, which means
+that the stack is unwound, which means that "resumption"'s target
+(i.e. the resumption) is deleted, which... is already happening at the
+moment! Everything ends in a disaster.
 
-If the user resumes the resumption, the control goes back to InvokeCmd
-[C]. The user gives up the ownership of the resumption, which means
-that "resumption" is now a truly unique pointer, and we can safely
-delete it [D], as it won't be needed any more. Because the resumption
-has unique ownership of the suspended fiber, there is no other way to
-resume the fiber than by resuming this particular resumption.
+In the other case, when the user resumes the resumption, the control
+goes back to InvokeCmd [C]. The user gives up the ownership of the
+resumption, which means that "resumption" is now a truly unique
+pointer, and we can safely delete it [D], as it won't be needed any
+more. Because the resumption has unique ownership of the suspended
+fiber, there is no other way to resume the fiber than by resuming this
+particular resumption, which means that it is safe to delete the
+resumption.
 */
 
 template <typename Out, typename Answer>
