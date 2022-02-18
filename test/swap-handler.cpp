@@ -76,7 +76,7 @@ public:
   Reader(R val) : val(val) { }
 private:
   const R val;
-  Answer CommandClause(Read<R>, std::unique_ptr<Resumption<int,Answer>> r) override
+  Answer CommandClause(Read<R>, std::unique_ptr<Resumption<R, Answer>> r) override
   {
     return OneShot::Resume(std::move(r), val);
   }

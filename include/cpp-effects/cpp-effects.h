@@ -156,13 +156,9 @@ public:
   virtual ~MetaframeBase() { }
   void DebugPrint() const
   {
-    std::cout << "[";
-    for (auto i : handledCmds) { std::cout << i.name() << ", "; }
-    std::cout << label << ", " << (bool)fiber << "]";
+    std::cout << "[" << label << ", " << (bool)fiber << "]";
   }
 protected:
-  const std::vector<std::type_index> handledCmds;
-  MetaframeBase(std::vector<std::type_index> handledCmds) : handledCmds(handledCmds), label(0) { }
   MetaframeBase() : label(0) { }
   int64_t label;
 private:
@@ -217,7 +213,6 @@ class Handler : public MetaframeBase, public CmdClause<Answer, Cmds>... {
 public:
   using AnswerType = Answer;
   using BodyType = Body;
-  Handler() : MetaframeBase({typeid(Cmds)...}) { }
 protected:
   virtual Answer ReturnClause(Body b) = 0;
 private:
@@ -233,7 +228,6 @@ class Handler<Answer, void, Cmds...> : public MetaframeBase, public CmdClause<An
 public:
   using AnswerType = Answer;
   using BodyType = void;
-  Handler() : MetaframeBase({typeid(Cmds)...}) { }
 protected:
   virtual Answer ReturnClause() = 0;
 private:
@@ -363,29 +357,35 @@ public:
   template <typename Cmd>
   static typename Cmd::OutType InvokeCmd(int64_t gotoHandler, const Cmd& cmd)
   {
+    // We rely on the virtual method of the metaframe, as at this
+    // point we cannot know what AnswerType and BodyType are.
+
     // E.g. looking for d in [a][b][c][d][e][f][g.]
     // ===>
     // Run d.cmd in [a][b][c.] with r.stack = [d][e][f][g],
     // where [_.] denotes a frame with invalid (i.e. current) fiber
-    auto cond = [&](MetaframeBase* mf) {
-      return mf->label != -1 &&
-        (gotoHandler == 0
-        ? std::find(mf->handledCmds.begin(), mf->handledCmds.end(), typeid(Cmd))
-          != mf->handledCmds.end()
-        : mf->label == gotoHandler);
-    };
-    auto it = std::find_if(Metastack().rbegin(), Metastack().rend(), cond);
-    if (it == Metastack().rend()) {
-      std::cerr << "error: no handler for " << typeid(Cmd).name() << std::endl;
+
+    // Looking for handler based on the type of the command
+    if (gotoHandler == 0) {
+      for (auto it = Metastack().rbegin(); it != Metastack().rend(); ++it) {
+        if ((*it)->label == -1) { continue; }
+        if (auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it)) {
+          return canInvoke->InvokeCmd(it, cmd);
+        }
+      }
+      std::cerr << "error: no handler for command " << typeid(Cmd).name() << std::endl;
       DebugPrintMetastack();
       exit(-1);
-    }
-    // Now we rely on the virtual method of the metaframe, as at this
-    // point we cannot know what AnswerType and BodyType are.
-    auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it);
-    if (canInvoke) {
-      return canInvoke->InvokeCmd(it, cmd);
+
+    // Looking for handler based on its label
     } else {
+      auto cond = [&](MetaframeBase* mf) {
+        return mf->label != -1 && mf->label == gotoHandler;
+      };
+      auto it = std::find_if(Metastack().rbegin(), Metastack().rend(), cond);
+      if (auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it)) {
+          return canInvoke->InvokeCmd(it, cmd);
+      }
       std::cerr << "error: handler with id " << gotoHandler
                 << " does not handle " << typeid(Cmd).name() << std::endl;
       DebugPrintMetastack();
