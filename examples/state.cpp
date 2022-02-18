@@ -2,7 +2,31 @@
 // Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
 // License: MIT
 
-// Example: Different forms of state:
+/*
+Example: Different forms of state:
+
+1. Stateful Handler -- In this example state is kept as a member in
+the handler object. Commands change this state.
+
+2. State using lambdas -- This is the usual way that state is
+presented using non-parameterised handlers in pure languages. The
+computation is interpreted as a function from the initial state to a
+value, while commands are interpreted as appropriate composition of
+these functions.
+
+3. State using handler-switching -- This is a tricky implementation,
+in which the Get command is interpreted using a "reader" handler. The
+Set command is interpreted by switching the initial reader handler for
+a different reader handler that provides the new state. This switching
+is done by sandwiching the reader handlers in a pair of handlers: Aid
+(on the outside) and Abet (on the inside). The role of Abet is to
+capture the continuation without the reader's handler, and pass it to
+Aid, which throws away its continuation (together with the old
+reader), and handles (using the new reader) the resumed continuation
+caught by Abet. On top of this (or rather on the inside of this), we
+have the actual handler for Put and Get, which dispatches the commands
+to the current reader and Abet.
+*/
 
 #include <iostream>
 

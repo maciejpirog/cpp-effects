@@ -41,7 +41,9 @@ class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAi
 
 template <typename H>
 class Abet : public Handler<typename H::BodyType, typename H::BodyType, CmdAbet<H>> {
-  [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c, std::unique_ptr<Resumption<void, typename H::BodyType>> r) override {
+  [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c,
+    std::unique_ptr<Resumption<void, typename H::BodyType>> r) override
+  {
     OneShot::InvokeCmd(CmdAid<H>{{}, c.han, r.release()});
     exit(-1); // This will never be reached
   }
@@ -59,7 +61,6 @@ typename H::AnswerType SwappableHandleWith(std::function<typename H::BodyType()>
     return OneShot::HandleWith([=](){
         return OneShot::Handle<Abet<H>>(body);
       },
-        //std::make_unique<Reader>(100));
       std::unique_ptr<H>(h));
   });
 }
@@ -112,6 +113,7 @@ int comp()
 
 int main()
 {
+  std::cout << "--- swap-handler ---" << std::endl;
   std::cout <<
     SwappableHandleWith(comp, std::unique_ptr<ReaderType<int, int>>(new Reader<int, int>(100)))
     << std::endl;

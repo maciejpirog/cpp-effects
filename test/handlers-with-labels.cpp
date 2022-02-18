@@ -43,6 +43,7 @@ void rec(int64_t n)
 
 int main()
 {
+  std::cout << "--- handlers-with-labels ---" << std::endl;
   rec(1000);
   std::cout << std::endl;
 }
