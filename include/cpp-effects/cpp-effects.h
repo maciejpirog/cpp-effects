@@ -494,7 +494,7 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
 
 /* [NOTE] ... on memory management of resumptions
 
-The fact that call stacks are now first class objects introduces an
+The fact that call stacks are now first class introduces an
 interesting subtlety: one of the rare occasions when the code
 
 void foo() 
@@ -531,8 +531,7 @@ resumption, which means that "resumption" is now a truly unique
 pointer, and we can safely delete it [D], as it won't be needed any
 more. Because the resumption has unique ownership of the suspended
 fiber, there is no other way to resume the fiber than by resuming this
-particular resumption, which means that it is safe to delete the
-resumption.
+particular resumption, which means that it is safe to delete it now.
 */
 
 template <typename Out, typename Answer>
