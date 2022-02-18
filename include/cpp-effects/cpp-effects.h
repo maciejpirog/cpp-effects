@@ -384,7 +384,7 @@ public:
       };
       auto it = std::find_if(Metastack().rbegin(), Metastack().rend(), cond);
       if (auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it)) {
-          return canInvoke->InvokeCmd(it, cmd);
+        return canInvoke->InvokeCmd(it, cmd);
       }
       std::cerr << "error: handler with id " << gotoHandler
                 << " does not handle " << typeid(Cmd).name() << std::endl;
