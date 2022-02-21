@@ -16,7 +16,7 @@ FIND_PACKAGE (Boost 1.70 COMPONENTS context REQUIRED)
 
 if (Boost_FOUND)
   add_subdirectory (src)
-  add_subdirectory (examples)
+  #add_subdirectory (examples)
   add_subdirectory (test)
 else()
   message (STATUS "Boost not found!")

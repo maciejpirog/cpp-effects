@@ -4,8 +4,8 @@
 
 // Main header file for the library
 
-#ifndef HANDLER_H
-#define HANDLER_H
+#ifndef CPP_EFFECTS_CPP_EFFECTS_H
+#define CPP_EFFECTS_CPP_EFFECTS_H
 
 // Use Boost with support for Valgrind
 /*
@@ -154,9 +154,11 @@ class MetaframeBase {
   template <typename, typename> friend class Resumption; 
 public:
   virtual ~MetaframeBase() { }
-  void DebugPrint() const
+  virtual void DebugPrint() const
   {
-    std::cout << "[" << label << ", " << (bool)fiber << "]";
+    std::cout << "[" << label << ":" << typeid(*this).name();
+    if (!fiber) { std::cout << " (active)"; }
+    std::cout << "]";
   }
 protected:
   MetaframeBase() : label(0) { }
@@ -365,26 +367,25 @@ public:
     // Run d.cmd in [a][b][c.] with r.stack = [d][e][f][g],
     // where [_.] denotes a frame with invalid (i.e. current) fiber
 
-    // Looking for handler based on the type of the command
     if (gotoHandler == 0) {
+      // Looking for handler based on the type of the command
       for (auto it = Metastack().rbegin(); it != Metastack().rend(); ++it) {
         if ((*it)->label == -1) { continue; }
         if (auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it)) {
-          return canInvoke->InvokeCmd(it, cmd);
+          return canInvoke->InvokeCmd(++it, cmd);
         }
       }
       std::cerr << "error: no handler for command " << typeid(Cmd).name() << std::endl;
       DebugPrintMetastack();
       exit(-1);
-
-    // Looking for handler based on its label
     } else {
+      // Looking for handler based on its label
       auto cond = [&](MetaframeBase* mf) {
         return mf->label != -1 && mf->label == gotoHandler;
       };
       auto it = std::find_if(Metastack().rbegin(), Metastack().rend(), cond);
       if (auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it)) {
-        return canInvoke->InvokeCmd(it, cmd);
+        return canInvoke->InvokeCmd(++it, cmd);
       }
       std::cerr << "error: handler with id " << gotoHandler
                 << " does not handle " << typeid(Cmd).name() << std::endl;
@@ -458,8 +459,8 @@ template <typename Answer, typename Cmd>
 typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd)
 {
+  // (continued from OneShot::InvokeCmd) ...looking for [d]
   auto jt = it.base();
-  --jt;
   auto resumption = new Resumption<typename Cmd::OutType, Answer>();  // See (NOTE) below
   resumption->storedMetastack.splice(
     resumption->storedMetastack.begin(), OneShot::Metastack(), jt, OneShot::Metastack().end());
@@ -628,4 +629,4 @@ void PlainResumption<void, Answer>::TailResume()
 
 } // namespace CppEffects
 
-#endif // HANDLER_H
+#endif // CPP_EFFECTS_CPP_EFFECTS_H
