@@ -2,20 +2,22 @@
 // Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
 // License: MIT
 
-// Modifiers that force specific shapes of command clauses in
-// handlers, which is useful for readability (e.g., we can read from
-// the type that we will not use the resumption) and performance
-// (e.g., there is no need to allocate the resumption).
+// This file contains modifiers that force specific shapes of command
+// clauses in handlers, which is useful for readability (e.g., we can
+// read from the type that we will not use the resumption) and
+// performance (e.g., there is no need to allocate the resumption).
 //
-// Each clause consists of a template that modifies the type of the
-// clause in the definition of a handler. For example, we can specify
-// that a particular handler will not need the resumption:
+// Each modifier consists of a template, which marks a command in the
+// type of the handler, and a specialisation of the CommandClause
+// class that modifies the type of the clause in the definition of the
+// handler. For example, we can specify that a particular handler will
+// not need the resumption:
 //
 // struct MyCmd : Command<int> { };
 // struct OtherCmd : Command<void> { };
 // class MyHandler : public Handler <char, void, NoResume<MyCmd>>, OtherCmd> {
 //   char CommandClause(MyCmd) override { ... }
-//};
+// };
 //
 // Note that because we used the NoResume modifier, the type of
 // CommandClause for MyCmd is now different.

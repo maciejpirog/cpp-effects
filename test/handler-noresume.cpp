@@ -57,8 +57,42 @@ void test()
   std::cout << "\t(expected: [in][in][caught][out]43)" << std::endl;
 }
 
+// ---------------------------------
+// Example from the reference manual
+// ---------------------------------
+
+class Cancel : public Handler<void, void, NoResume<Error>> {
+  void CommandClause(Error) override
+  {
+    std::cout << "Error!" << std::endl;
+  }
+  void ReturnClause() override {}
+};
+
+void testError()
+{
+  std::cout << "Welcome!" << std::endl;
+  OneShot::Handle<Cancel>([](){
+    std::cout << "So far so good..." << std::endl;
+    OneShot::InvokeCmd(Error{}); 
+    std::cout << "I made it!" << std::endl;
+  });
+  std::cout << "Bye!" << std::endl;
+}
+
+// Output:
+// Welcome!
+// So far so good...
+// Error!
+// Bye!
+
+// ----
+// Main
+// ----
+
 int main()
 {
   std::cout << "--- noresume-handler ---" << std::endl;
   test();
+  testError();
 }

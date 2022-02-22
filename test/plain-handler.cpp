@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <iostream>
+#include <variant>
 
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
@@ -163,9 +164,41 @@ void testSandwich()
   std::cout << std::endl;
 }
 
+// ---------------------------------
+// Example from the reference manual
+// ---------------------------------
+
+struct Add : Command<int> {
+  int x, y;
+};
+
+template <typename T>
+class Calculator : public Handler <T, T, Plain<Add>> {
+  int CommandClause(Add c) override {
+    return c.x + c.y;
+  }
+  T ReturnClause(T s) override {
+    return s;
+  }
+};
+
+void testCalc()
+{
+  OneShot::Handle<Calculator<std::monostate>>([]() -> std::monostate {
+    std::cout << "2 + 5 = " << OneShot::InvokeCmd<Add>({{}, 2, 5}) << std::endl;
+    std::cout << "11 + 3 = " << OneShot::InvokeCmd<Add>({{}, 11, 3}) << std::endl;
+    return {};
+  });
+}
+
+// -----------------
+// The main function
+// -----------------
+
 int main()
 {
   std::cout << "--- plain-handler ---" << std::endl;
   testStateful();
   testSandwich();
+  testCalc();
 }
