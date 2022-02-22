@@ -122,7 +122,7 @@ To handle a computation, one needs to create a new object of the derived class:
 
 ```cpp
 auto body = [](){ return get(put(get() + 1)); } 
-OneShot::HandleWith(body, std::make_unique<State<int>>(10)); // returns 11
+OneShot::HandleWith(body, std::make_shared<State<int>>(10)); // returns 11
 ```
 
 The lifetime of this object is managed by the library: it is deleted when the handled computation returns a value or a resumption that contains this handler is discontinued (e.g. is not resumed in a command clause).

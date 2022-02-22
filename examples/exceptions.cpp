@@ -64,7 +64,7 @@ int product(const std::vector<int>& v)
       }
       return r;
     },
-    std::make_unique<WithDefault<int>>(0));
+    std::make_shared<WithDefault<int>>(0));
 }
 
 int main()

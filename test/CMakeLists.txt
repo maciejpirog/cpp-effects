@@ -3,6 +3,7 @@ link_libraries (CppEffects)
 
 add_executable (traits traits.cpp)
 add_executable (command-lifetime command-lifetime.cpp)
+add_executable (handler-lifetime handler-lifetime.cpp)
 add_executable (cut-out-the-middleman cut-out-the-middleman.cpp)
 add_executable (swap-handler swap-handler.cpp)
 add_executable (global-from-handle global-from-handle.cpp)

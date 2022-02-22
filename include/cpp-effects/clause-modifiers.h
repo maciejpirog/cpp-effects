@@ -47,11 +47,11 @@ protected:
   virtual typename Cmd::OutType CommandClause(Cmd) = 0;
 private:
   virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd) override
+    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) override
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
     const auto jt = it.base();
-    std::list<MetaframeBase*> storedMetastack;
+    std::list<MetaframePtr> storedMetastack;
     storedMetastack.splice(
       storedMetastack.begin(), OneShot::Metastack(), jt, OneShot::Metastack().end());
     // at this point: metastack = [a][b][c]; stored stack = [d][e][f][g.]
@@ -91,7 +91,7 @@ protected:
   virtual Answer CommandClause(Cmd) = 0;
 private:
   [[noreturn]] virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd) override
+    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) override
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
     auto jt = it.base();

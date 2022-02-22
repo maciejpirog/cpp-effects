@@ -100,8 +100,8 @@ private:
 
 void testStateful()
 {
-  OneShot::HandleWith(test, std::make_unique<HStateful<void, int>>(100));
-  std::cout << OneShot::HandleWith(test2, std::make_unique<HStateful<std::string, int>>(100));
+  OneShot::HandleWith(test, std::make_shared<HStateful<void, int>>(100));
+  std::cout << OneShot::HandleWith(test2, std::make_shared<HStateful<std::string, int>>(100));
   std::cout << std::endl;
 
   // Output:
@@ -158,9 +158,9 @@ void testSandwich()
   OneShot::HandleWith([](){
   OneShot::HandleWith([](){
     sandwichComp();
-  }, std::make_unique<Bracket>("[in]"));
-  }, std::make_unique<Printer>("[print]"));
-  }, std::make_unique<Bracket>("[out]"));
+  }, std::make_shared<Bracket>("[in]"));
+  }, std::make_shared<Printer>("[print]"));
+  }, std::make_shared<Bracket>("[out]"));
   std::cout << std::endl;
 }
 

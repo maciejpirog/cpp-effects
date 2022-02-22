@@ -56,8 +56,10 @@ struct Tangible<void> {
 // ------------------------------
 
 class OneShot;
-class MetaframeBase;
+class Metaframe;
 class InitMetastack;
+
+using MetaframePtr = std::shared_ptr<Metaframe>;
 
 // --------
 // Commands
@@ -83,11 +85,10 @@ protected:
 template <typename Out, typename Answer>
 class Resumption : public ResumptionBase {
   friend class OneShot;
-  template <typename, typename, typename...> friend struct Metaframe;
   template <typename, typename> friend class CmdClause;
 protected:
   Resumption() { }
-  std::list<MetaframeBase*> storedMetastack;
+  std::list<MetaframePtr> storedMetastack;
   std::optional<Tangible<Out>> cmdResultTransfer; // Used to transfer data between fibers
   virtual Answer Resume();
   virtual void TailResume() override;
@@ -142,18 +143,18 @@ struct Transfer : TransferBase {
 // ----------
 
 // Labels:
-// 0   -- the initial fiber with no handler (set up by InitMetastack)
+// 0   -- the initial fiber with no handler (the static in OneShot::Metastack())
 // -1  -- invalid handler (used to shadow a handler in the return clause)
 // >0  -- user-defined labels
 // <0  -- auto-generated labels
 
-class MetaframeBase {
+class Metaframe {
   friend class OneShot;
   template <typename, typename> friend class CmdClause;
   friend class InitMetastack;
   template <typename, typename> friend class Resumption; 
 public:
-  virtual ~MetaframeBase() { }
+  virtual ~Metaframe() { }
   virtual void DebugPrint() const
   {
     std::cout << "[" << label << ":" << typeid(*this).name();
@@ -161,7 +162,7 @@ public:
     std::cout << "]";
   }
 protected:
-  MetaframeBase() : label(0) { }
+  Metaframe() : label(0) { }
   int64_t label;
 private:
   ctx::fiber fiber;
@@ -180,7 +181,7 @@ class CanInvokeCmdClause {
   friend class OneShot;
 protected:
   virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd) = 0;
+    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) = 0;
 };
 
 // CmdClause is a class that allows us to define a handler with a
@@ -196,7 +197,7 @@ protected:
   virtual Answer CommandClause(Cmd, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>) = 0;
 private:
   virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd) override;
+    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) override;
 };
 
 // --------
@@ -209,7 +210,7 @@ private:
 // pushed on the metastack.
 
 template <typename Answer, typename Body, typename... Cmds>
-class Handler : public MetaframeBase, public CmdClause<Answer, Cmds>... {
+class Handler : public Metaframe, public CmdClause<Answer, Cmds>... {
   friend class OneShot;
   using CmdClause<Answer, Cmds>::CommandClause...;
 public:
@@ -224,7 +225,7 @@ private:
 // We specialise for Body = void
 
 template <typename Answer, typename... Cmds>
-class Handler<Answer, void, Cmds...> : public MetaframeBase, public CmdClause<Answer, Cmds>... {
+class Handler<Answer, void, Cmds...> : public Metaframe, public CmdClause<Answer, Cmds>... {
   friend class OneShot;
   using CmdClause<Answer, Cmds>::CommandClause...;
 public:
@@ -257,10 +258,10 @@ class OneShot {
   friend class InitMetastack;
 
 public:
-  static std::list<MetaframeBase*>& Metastack()
+  static std::list<MetaframePtr>& Metastack()
   {
-     static MetaframeBase initMetaframe;
-     static std::list<MetaframeBase*> metastack{&initMetaframe};
+     static auto initMetaframe = new Metaframe();
+     static std::list<MetaframePtr> metastack{std::shared_ptr<Metaframe>(initMetaframe)};
      return metastack;
   };
   static TransferBase* transferBuffer;
@@ -280,9 +281,9 @@ public:
   static typename H::AnswerType Handle(int64_t label, std::function<typename H::BodyType()> body)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
-      return HandleWith(label, body, std::make_unique<H>());
+      return HandleWith(label, body, std::make_shared<H>());
     } else {
-      HandleWith(label, body, std::make_unique<H>());
+      HandleWith(label, body, std::make_shared<H>());
     }
   }
 
@@ -298,7 +299,7 @@ public:
 
   template <typename H>
   static typename H::AnswerType HandleWith(
-    int64_t label, std::function<typename H::BodyType()> body, std::unique_ptr<H> handler)
+    int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
   {
     // E.g. for different stack use policy
     // ctx::protected_fixedsize_stack pf(10000000);
@@ -306,7 +307,7 @@ public:
         [&](ctx::fiber&& prev) -> ctx::fiber&& {
       Metastack().back()->fiber = std::move(prev);
       handler->label = label;
-      Metastack().push_back(handler.release());
+      Metastack().push_back(handler);
       Tangible<typename H::BodyType> b(body);
       // The rest of the fiber might live in a resumption, after
       // the caller is long gone, hence we cannot use arguments
@@ -316,11 +317,10 @@ public:
       Metastack().back()->label = -1;
       if constexpr (!std::is_void<typename H::AnswerType>::value) {
         OneShot::transferBuffer = new Transfer<typename H::AnswerType>(
-          static_cast<H*>(Metastack().back())->RunReturnClause(std::move(b)));
+          std::static_pointer_cast<H>(Metastack().back())->RunReturnClause(std::move(b)));
       } else {
-        static_cast<H*>(Metastack().back())->RunReturnClause(std::move(b));
+        std::static_pointer_cast<H>(Metastack().back())->RunReturnClause(std::move(b));
       }
-      delete Metastack().back();
       Metastack().pop_back();
       std::move(Metastack().back()->fiber).resume();
       
@@ -347,12 +347,12 @@ public:
 
   template <typename H>
   static typename H::AnswerType HandleWith(
-    std::function<typename H::BodyType()> body, std::unique_ptr<H> handler)
+    std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
       return HandleWith(OneShot::FreshLabel(), body, std::move(handler));
     } else {
-      HandleWith(OneShot::FreshLabel(), body, std::move(handler));
+      HandleWith(OneShot::FreshLabel(), body, handler);
     }
   }
 
@@ -371,7 +371,7 @@ public:
       // Looking for handler based on the type of the command
       for (auto it = Metastack().rbegin(); it != Metastack().rend(); ++it) {
         if ((*it)->label == -1) { continue; }
-        if (auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it)) {
+        if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
           return canInvoke->InvokeCmd(++it, cmd);
         }
       }
@@ -380,11 +380,11 @@ public:
       exit(-1);
     } else {
       // Looking for handler based on its label
-      auto cond = [&](MetaframeBase* mf) {
+      auto cond = [&](MetaframePtr mf) {
         return mf->label != -1 && mf->label == gotoHandler;
       };
       auto it = std::find_if(Metastack().rbegin(), Metastack().rend(), cond);
-      if (auto canInvoke = dynamic_cast<CanInvokeCmdClause<Cmd>*>(*it)) {
+      if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
         return canInvoke->InvokeCmd(++it, cmd);
       }
       std::cerr << "error: handler with id " << gotoHandler
@@ -457,7 +457,7 @@ public:
 
 template <typename Answer, typename Cmd>
 typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
-  std::list<MetaframeBase*>::reverse_iterator it, const Cmd& cmd)
+  std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
 {
   // (continued from OneShot::InvokeCmd) ...looking for [d]
   auto jt = it.base();

@@ -33,7 +33,7 @@ private:
 void rec(int64_t n)
 {
   if (n > 0) {
-    OneShot::HandleWith(n, std::bind(rec, n - 1), std::make_unique<Reader<int64_t>>(n));
+    OneShot::HandleWith(n, std::bind(rec, n - 1), std::make_shared<Reader<int64_t>>(n));
   } else {
     for (int64_t i = 0; i < 300000; i += 767) {
       std::cout << OneShot::InvokeCmd(i % 999 + 1, Read<int64_t>{}) << " ";

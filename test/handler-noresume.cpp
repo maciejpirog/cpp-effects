@@ -51,9 +51,9 @@ void test()
     OneShot::InvokeCmd(Print{});
     OneShot::InvokeCmd(Print{});
     return 100;
-  }, std::make_unique<Printer>("[in]"));  OneShot::InvokeCmd(Print{}); return 2;
-  }, std::make_unique<Catch>());          OneShot::InvokeCmd(Print{}); return i;
-  }, std::make_unique<Printer>("[out]"));
+  }, std::make_shared<Printer>("[in]"));  OneShot::InvokeCmd(Print{}); return 2;
+  }, std::make_shared<Catch>());          OneShot::InvokeCmd(Print{}); return i;
+  }, std::make_shared<Printer>("[out]"));
   std::cout << "\t(expected: [in][in][caught][out]43)" << std::endl;
 }
 

@@ -24,6 +24,6 @@ jobs:
     - name: examples
       run: bin/threads && bin/actors && bin/async-await && bin/generators && bin/rollback-state && bin/state
     - name: tests
-      run: bin/test/traits && bin/test/command-lifetime && bin/test/cut-out-the-middleman && bin/test/swap-handler && bin/test/global-from-handle && bin/test/handlers-with-labels && bin/test/plain-handler && bin/test/handler-noresume
+      run: bin/test/traits && bin/test/command-lifetime && bin/test/handler-lifetime && bin/test/cut-out-the-middleman && bin/test/swap-handler && bin/test/global-from-handle && bin/test/handlers-with-labels && bin/test/plain-handler && bin/test/handler-noresume
     - name: micro-benchmarks
       run: bin/benchmark/bench-exceptions

@@ -47,7 +47,7 @@ void testAnswerType()
 {
   std::cout << OneShot::HandleWith(
       [](){ return OneShot::InvokeCmd(Cmd{}) + 10; },
-      std::make_unique<TestAnswerType>()).val
+      std::make_shared<TestAnswerType>()).val
     << "\t(expected: 111)" << std::endl;
 }
 
@@ -66,7 +66,7 @@ void testAnswerTypeVoid()
 {
   std::cout << OneShot::HandleWith(
       [](){ OneShot::InvokeCmd(Cmd{}); },
-      std::make_unique<TestAnswerTypeVoid>()).val
+      std::make_shared<TestAnswerTypeVoid>()).val
     << "\t(expected: 101)" << std::endl;
 }
 
@@ -85,7 +85,7 @@ void testBodyType()
 {
   std::cout << OneShot::HandleWith(
       [](){ return XTCC(OneShot::InvokeCmd(Cmd{}) + 10); },
-      std::make_unique<TestBodyType>())
+      std::make_shared<TestBodyType>())
     << "\t(expected: 111)" << std::endl;
 }
 
@@ -105,7 +105,7 @@ void testBodyTypeVoid()
 {
   OneShot::HandleWith(
     [](){ return XTCC(OneShot::InvokeCmd(Cmd{}) + 10); },
-    std::make_unique<TestBodyTypeVoid>());
+    std::make_shared<TestBodyTypeVoid>());
   std::cout << "\t(expected: *110)" << std::endl;
 }
 
@@ -138,7 +138,7 @@ void xTestAnswerType()
 {
   std::cout << OneShot::HandleWith(
       [](){ return OneShot::InvokeCmd(CmdX(0)) + 10; },
-      std::make_unique<XTestAnswerType>()).val
+      std::make_shared<XTestAnswerType>()).val
     << "\t(expected: 111)" << std::endl;
 }
 
@@ -157,7 +157,7 @@ void xTestAnswerTypeVoid()
 {
   std::cout << OneShot::HandleWith(
       [](){ OneShot::InvokeCmd(CmdX(0)); },
-      std::make_unique<XTestAnswerTypeVoid>()).val
+      std::make_shared<XTestAnswerTypeVoid>()).val
     << "\t(expected: 101)" << std::endl;
 }
 
@@ -176,7 +176,7 @@ void xTestBodyType()
 {
   std::cout << OneShot::HandleWith(
       [](){ return XTCC(OneShot::InvokeCmd(CmdX(0)) + 10); },
-      std::make_unique<XTestBodyType>())
+      std::make_shared<XTestBodyType>())
     << "\t(expected: 111)" << std::endl;
 }
 
@@ -196,7 +196,7 @@ void xTestBodyTypeVoid()
 {
   OneShot::HandleWith(
     [](){ return XTCC(OneShot::InvokeCmd(CmdX(0)) + 10); },
-    std::make_unique<XTestBodyTypeVoid>());
+    std::make_shared<XTestBodyTypeVoid>());
   std::cout << "\t(expected: *110)" << std::endl;
 }
 
@@ -232,7 +232,7 @@ void yTestOutType()
 {
   std::cout << OneShot::HandleWith(
       [](){ return OneShot::InvokeCmd(CmdY{{}, 100}).val + 10; },
-      std::make_unique<YTestOutType>())
+      std::make_shared<YTestOutType>())
     << "\t(expected: 111)" << std::endl;
 }
 

@@ -161,11 +161,11 @@ public:
   
   template <typename H>
   static typename H::AnswerType HandleWith(
-    std::function<typename H::BodyType()> body, std::unique_ptr<H> handler);
+    std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
   
   template <typename H>
   static typename H::AnswerType HandleWith(
-    int64_t label, std::function<typename H::BodyType()> body, std::unique_ptr<H> handler);
+    int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 	
   template <typename Cmd>
   static typename Cmd::OutType InvokeCmd(const Cmd& cmd);
@@ -223,18 +223,18 @@ Create a new handler of type `H` (using its trivial constructor) and use it to h
 
 - **Return value** `H::AnswerType` - The final answer of the handler, returned by one of the overloads of `H::CommandClause` or `H::ReturnClause`.
 
-Note: `OneShot::Handle<H>(b)` is equivalent to `OneShot::Handle(b, std::make_unique<H>())`.
+Note: `OneShot::Handle<H>(b)` is equivalent to `OneShot::Handle(b, std::make_sharede<H>())`.
 
 #### :large_orange_diamond: OneShot::HandleWith
 
 ```cpp
   template <typename H>
   static typename H::AnswerType HandleWith(
-    std::function<typename H::BodyType()> body, std::unique_ptr<H> handler);
+    std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
   
   template <typename H>
   static typename H::AnswerType HandleWith(
-    int64_t label, std::function<typename H::BodyType()> body, std::unique_ptr<H> handler);
+    int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 ```
 
 Hadle the computation `body` using the given handler of type `H`.
@@ -245,7 +245,7 @@ Hadle the computation `body` using the given handler of type `H`.
 
 - `std::function<typename H::BodyType()> body` - The handled computation.
 
-- `std::unique_ptr<H> handler` - The handler used to handle `body`.
+- `std::shared_ptr<H> handler` - The handler used to handle `body`.
 
 - **Return value** `H::AnswerType` - The final answer of the handler, returned by one of the overloads of `H::CommandClause` or `H::ReturnClause`.
 

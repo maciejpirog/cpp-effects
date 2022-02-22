@@ -126,8 +126,8 @@ private:
 
 void testStateful()
 {
-  OneShot::HandleWith(test, std::make_unique<HStateful<void, int>>(100));
-  std::cout << OneShot::HandleWith(test2, std::make_unique<HStateful<std::string, int>>(100));
+  OneShot::HandleWith(test, std::make_shared<HStateful<void, int>>(100));
+  std::cout << OneShot::HandleWith(test2, std::make_shared<HStateful<std::string, int>>(100));
   std::cout << std::endl;
 
   // Output:
@@ -186,8 +186,8 @@ class HLambda<void, S> : public Handler<std::function<void(S)>, void, Put<S>, Ge
 
 void testLambda()
 {
-  OneShot::HandleWith(test, std::make_unique<HLambda<void, int>>())(100);
-  std::cout << OneShot::HandleWith(test2, std::make_unique<HLambda<std::string, int>>())(100);
+  OneShot::HandleWith(test, std::make_shared<HLambda<void, int>>())(100);
+  std::cout << OneShot::HandleWith(test2, std::make_shared<HLambda<std::string, int>>())(100);
   std::cout << std::endl;
 
   // Output:
@@ -204,13 +204,13 @@ class Bottom { Bottom() = delete; };
 
 template <typename H>
 struct CmdAid : Command<Bottom> {
-  H* han;
+  std::shared_ptr<H> han;
   Resumption<void, typename H::BodyType>* res;
 };
 
 template <typename H>
 struct CmdAbet : Command<void> {
-  H* han;
+  std::shared_ptr<H> han;
 };
 
 template <typename H>
@@ -218,8 +218,7 @@ class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAi
   typename H::AnswerType CommandClause(CmdAid<H> c, std::unique_ptr<Resumption<Bottom, typename H::AnswerType>>) override {
     return OneShot::Handle<Aid<H>>([=](){
       return OneShot::HandleWith([=](){
-          return OneShot::Resume(std::unique_ptr<Resumption<void, typename H::BodyType>>(c.res)); },
-        std::unique_ptr<H>(c.han));
+          return OneShot::Resume(std::unique_ptr<Resumption<void, typename H::BodyType>>(c.res)); }, c.han);
     });
   }
   typename H::AnswerType ReturnClause(typename H::AnswerType a) override
@@ -241,14 +240,13 @@ class Abet : public Handler<typename H::BodyType, typename H::BodyType, CmdAbet<
 };
 
 template <typename H>
-typename H::AnswerType SwappableHandleWith(std::function<typename H::BodyType()> body, std::unique_ptr<H> handler)
+typename H::AnswerType SwappableHandleWith(std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
 {
-  auto h = handler.release();
   return OneShot::Handle<Aid<H>>([=](){
     return OneShot::HandleWith([=](){
         return OneShot::Handle<Abet<H>>(body);
       },
-      std::unique_ptr<H>(h));
+      std::move(handler));
   });
 }
 
@@ -278,7 +276,8 @@ template<typename Answer, typename S>
 class HSwitching : public Handler<Answer, Answer, Put<S>, Get<S>> {
   Answer CommandClause(Put<S> p, std::unique_ptr<Resumption<void, Answer>> r) override
   {
-    OneShot::InvokeCmd(CmdAbet<ReaderType<Answer, S>>{{}, new Reader<Answer, S>(p.newState)});
+    OneShot::InvokeCmd(
+      CmdAbet<ReaderType<Answer, S>>{{}, std::make_shared<Reader<Answer, S>>(p.newState)});
     return OneShot::Resume(std::move(r));
   }
   Answer CommandClause(Get<S>, std::unique_ptr<Resumption<S, Answer>> r) override
@@ -297,7 +296,7 @@ void testSwitching()
 {
   std::cout << SwappableHandleWith(
     [](){ return OneShot::Handle<HSwitching<std::string, int>>(test2); },
-    std::unique_ptr<ReaderType<std::string, int>>(new Reader<std::string, int>(100)));
+    std::shared_ptr<ReaderType<std::string, int>>(new Reader<std::string, int>(100)));
 
   std::cout << std::endl;
 

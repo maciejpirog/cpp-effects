@@ -60,7 +60,7 @@ private:
   Future<T>* currentFuture;
   static void Run(Future<T>* future, std::function<T()> f)
   {
-    auto scheduler = std::make_unique<Scheduler<T>>();
+    auto scheduler = std::make_shared<Scheduler<T>>();
     scheduler->currentFuture = future;
     OneShot::HandleWith(f, std::move(scheduler));
   }
