@@ -121,7 +121,7 @@ private:
 To handle a computation, one needs to create a new object of the derived class:
 
 ```cpp
-auto body = [](){ return put(get() + 1); } 
+auto body = [](){ return get(put(get() + 1)); } 
 OneShot::HandleWith(body, std::make_unique<State<int>>(10)); // returns 11
 ```
 

@@ -30,6 +30,7 @@ template <typename Answer, typename Cmd>
 class CmdClause<Answer, NoResume<Cmd>> {
 protected:
   virtual Answer CommandClause(Cmd) = 0;
+  };
 ```
 
 Specialisation for command clauses that do not use the resumption. This is useful for handlers that behave like exception handlers or terminate the "current thread".
@@ -43,7 +44,7 @@ The command clause does not receive the current resumption, but it is allowed to
 struct Error : Command<void> { };
 
 class Cancel : public Handler<void, void, NoResume<Error>> {
-  void CommandClause(Error) override
+  void CommandClause(Error) override // no "resumption" argument
   {
     std::cout << "Error!" << std::endl;
   }
@@ -67,7 +68,7 @@ Output:
 ```
 Welcome!
 So far so good...
-error!
+Error!
 Bye!
 ```
 
@@ -100,7 +101,9 @@ struct Add : Command<int> {
 };
 
 class Calculator : public Handler <void, void, Plain<Add>> {
-  int CommandClause(Add c) override {
+  int CommandClause(Add c) override  // - no "resumption" argument
+                                     // - return type that of the command, not handler
+  {
     return c.x + c.y;
   }
   void ReturnClause() override { }
