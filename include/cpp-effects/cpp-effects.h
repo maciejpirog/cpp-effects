@@ -346,8 +346,8 @@ public:
   }
 
   template <typename H>
-  static typename H::AnswerType
-  HandleWith(std::function<typename H::BodyType()> body, std::unique_ptr<H> handler)
+  static typename H::AnswerType HandleWith(
+    std::function<typename H::BodyType()> body, std::unique_ptr<H> handler)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
       return HandleWith(OneShot::FreshLabel(), body, std::move(handler));
@@ -464,8 +464,7 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   auto resumption = new Resumption<typename Cmd::OutType, Answer>();  // See (NOTE) below
   resumption->storedMetastack.splice(
     resumption->storedMetastack.begin(), OneShot::Metastack(), jt, OneShot::Metastack().end());
-  // at this point: [a][b][c]; stored stack = [d][e][f][g.]
-  
+  // at this point: [a][b][c]; stored stack = [d][e][f][g.] 
   std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
     // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
     resumption->storedMetastack.back()->fiber = std::move(prev);      // (A)
