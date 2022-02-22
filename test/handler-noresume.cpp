@@ -8,7 +8,7 @@
 #include <iostream>
 
 #include "cpp-effects/cpp-effects.h"
-#include "cpp-effects/adaptors.h"
+#include "cpp-effects/clause-modifiers.h"
 
 using namespace CppEffects;
 

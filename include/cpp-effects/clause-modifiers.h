@@ -2,13 +2,26 @@
 // Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
 // License: MIT
 
-// Adaptors - additional classes that force specific shapes of command
-// clauses in handlers, which is useful for readability (e.g., we can
-// read from the type that we will not use the resumption) and
-// performance (e.g., there is no need to allocate the resumption).
+// Modifiers that force specific shapes of command clauses in
+// handlers, which is useful for readability (e.g., we can read from
+// the type that we will not use the resumption) and performance
+// (e.g., there is no need to allocate the resumption).
+//
+// Each clause consists of a template that modifies the type of the
+// clause in the definition of a handler. For example, we can specify
+// that a particular handler will not need the resumption:
+//
+// struct MyCmd : Command<int> { };
+// struct OtherCmd : Command<void> { };
+// class MyHandler : public Handler <char, void, NoResume<MyCmd>>, OtherCmd> {
+//   char CommandClause(MyCmd) override { ... }
+//};
+//
+// Note that because we used the NoResume modifier, the type of
+// CommandClause for MyCmd is now different.
 
-#ifndef CPP_EFFECTS_ADAPTORS_H
-#define CPP_EFFECTS_ADAPTORS_H
+#ifndef CPP_EFFECTS_SPECIAL_CLAUSES_H
+#define CPP_EFFECTS_SPECIAL_CLAUSES_H
 
 #include "cpp-effects/cpp-effects.h"
 
@@ -102,4 +115,4 @@ private:
 
 } // namespace CppEffects
 
-#endif // CPP_EFFECTS_ADAPTORS_H
+#endif // CPP_EFFECTS_SPECIAL_CLAUSES_H
