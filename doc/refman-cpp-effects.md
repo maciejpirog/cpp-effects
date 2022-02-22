@@ -1,5 +1,7 @@
 # cpp-effects/cpp-effects.h
 
+[<< Back to reference manual](refman.md)
+
 This header contains the basic classes used in the library.
 
 ## class `Command`

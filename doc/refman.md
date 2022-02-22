@@ -8,21 +8,21 @@
 
 The core of the library. It includes:
 
-- `Command` - Classes derived from `Command` define commands.
+- [`Command`](refman-cpp-effects.md#class-command) - Classes derived from `Command` define commands.
 
-- `Handler` - Classes derived from `Handler` define handlers.
+- [`Handler`](refman-cpp-effects.md#class-handler) - Classes derived from `Handler` define handlers.
 
-- `Resumption` - The class for suspended computations that are given to the user in handlers' command clauses.
+- [`Resumption`](refman-cpp-effects.md#classes-resumptionbase-and-resumption) - The class for suspended computations that are given to the user in handlers' command clauses.
 
-- `OneShot` - The actual interface (via static functions) of handling computations and invoking commands.
+- [`OneShot`](refman-cpp-effects.md#class-oneshot) - The actual interface (via static functions) of handling computations and invoking commands.
 
 **Header** [`refman-clause-modifiers.md`](refman-clause-modifiers.md)
 
 Modifiers that force specific shapes of command clauses in handlers.
 
-- `NoResume` - Define command clauses that do not use their resumptions.
+- [`NoResume`](refman-clause-modifiers.md#noresume-modifier) - Define command clauses that do not use their resumptions.
 
-- `Plain` - Define command clauses that interpret commands as functions (i.e., clauses that are self- and tail-resumptive).
+- [`Plain`](refman-clause-modifiers.md#plain-modifier) - Define command clauses that interpret commands as functions (i.e., clauses that are self- and tail-resumptive).
 
 ## Quick comparison with the more traditional functional approach
 
