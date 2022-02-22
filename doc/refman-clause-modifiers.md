@@ -30,7 +30,7 @@ template <typename Answer, typename Cmd>
 class CmdClause<Answer, NoResume<Cmd>> {
 protected:
   virtual Answer CommandClause(Cmd) = 0;
-  };
+};
 ```
 
 Specialisation for command clauses that do not use the resumption. This is useful for handlers that behave like exception handlers or terminate the "current thread".
