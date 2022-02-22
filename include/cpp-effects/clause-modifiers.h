@@ -95,7 +95,7 @@ private:
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
     auto jt = it.base();
-    for (auto i = jt; i != OneShot::Metastack().end(); ++i) { delete *i; }
+    //for (auto i = jt; i != OneShot::Metastack().end(); ++i) { delete *i; }
     OneShot::Metastack().erase(jt, OneShot::Metastack().end());
     // at this point: metastack = [a][b][c]
 

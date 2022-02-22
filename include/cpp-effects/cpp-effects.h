@@ -465,6 +465,7 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   resumption->storedMetastack.splice(
     resumption->storedMetastack.begin(), OneShot::Metastack(), jt, OneShot::Metastack().end());
   // at this point: [a][b][c]; stored stack = [d][e][f][g.] 
+
   std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
     // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
     resumption->storedMetastack.back()->fiber = std::move(prev);      // (A)

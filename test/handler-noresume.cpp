@@ -80,6 +80,7 @@ void testError()
   std::cout << "Bye!" << std::endl;
 }
 
+
 // Output:
 // Welcome!
 // So far so good...
