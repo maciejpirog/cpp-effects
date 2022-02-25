@@ -89,21 +89,23 @@ void testHandlersNR(int max, int mod_)
 
 int main()
 {
-std::cout << "***** native:" << std::endl << std::flush;
+std::cout << "--- exception handler + throw exception ---" << std::endl;
+
+std::cout << "native:       " << std::flush;
 
 auto begin = std::chrono::high_resolution_clock::now();
 testNative(100000, 1);
 auto end = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count() << "ns" << std::endl;
 
-std::cout << "***** handlers:" << std::endl << std::flush;
+std::cout << "handlers:     " << std::flush;
 
 auto begin2 = std::chrono::high_resolution_clock::now();
 testHandlers(100000, 1);
 auto end2 = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end2-begin2).count() << "ns" << std::endl;
 
-std::cout << "***** handlersNR" << std::endl << std::flush;
+std::cout << "handlers n-r: " << std::flush;
 
 auto begin3 = std::chrono::high_resolution_clock::now();
 testHandlersNR(100000, 1);

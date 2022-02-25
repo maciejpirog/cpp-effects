@@ -112,32 +112,6 @@ class PlainResumption<void, Answer> : public Resumption<void, Answer> {
   virtual void TailResume() override;
 };
 
-// --------------------------------
-// Transferring data between fibers
-// --------------------------------
-
-// "Transfers" are heap-allocated ephemeral objects, which are read
-// and then deleted shortly afterwards. Their purpose is to enable
-// communication between fibers via a global pointer to a Transfer.
-
-struct TransferBase { };
-
-template <typename A>
-struct Transfer : TransferBase {
-  Transfer() = delete;
-  Transfer(const A&) = delete;
-  Transfer& operator=(const Transfer& other) = delete;
-  Transfer& operator=(Transfer&& other) = delete;
-  Transfer(A&& v) : value(std::move(v)) { }
-  Tangible<A> value;
-  A GetValue()
-  {
-    Tangible<A> temp(std::move(value));
-    delete this;
-    return std::move(temp.value);
-  }
-};
-
 // ----------
 // Metaframes
 // ----------
@@ -264,7 +238,7 @@ public:
      static std::list<MetaframePtr> metastack{std::shared_ptr<Metaframe>(initMetaframe)};
      return metastack;
   };
-  static TransferBase* transferBuffer;
+  static void* answerPtr;
   static std::optional<TailAnswer> tailAnswer;
   static int64_t freshCounter;
 
@@ -301,6 +275,9 @@ public:
   static typename H::AnswerType HandleWith(
     int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
   {
+    using Answer = typename H::AnswerType;
+    using Body = typename H::BodyType;
+
     // E.g. for different stack use policy
     // ctx::protected_fixedsize_stack pf(10000000);
     ctx::fiber bodyFiber{/*std::alocator_arg, std::move(pf),*/
@@ -308,16 +285,16 @@ public:
       Metastack().back()->fiber = std::move(prev);
       handler->label = label;
       Metastack().push_back(handler);
-      Tangible<typename H::BodyType> b(body);
+      Tangible<Body> b(body);
       // The rest of the fiber might live in a resumption, after
       // the caller is long gone, hence we cannot use arguments
       // of HandleWith by reference from now on. The return
       // clause is executed in the same fiber, but it cannot use
       // commands of the handler.
       Metastack().back()->label = -1;
-      if constexpr (!std::is_void<typename H::AnswerType>::value) {
-        OneShot::transferBuffer = new Transfer<typename H::AnswerType>(
-          std::static_pointer_cast<H>(Metastack().back())->RunReturnClause(std::move(b)));
+      if constexpr (!std::is_void<Answer>::value) {
+        *(static_cast<std::optional<Answer>*>(answerPtr)) = 
+          std::static_pointer_cast<H>(Metastack().back())->RunReturnClause(std::move(b));
       } else {
         std::static_pointer_cast<H>(Metastack().back())->RunReturnClause(std::move(b));
       }
@@ -328,19 +305,33 @@ public:
       std::cerr << "error: malformed handler\n";
       exit(-1);
     }};
-
-    std::move(bodyFiber).resume();
-
-    // Trampoline tail-resumes
-    while (tailAnswer) {
-      TailAnswer tempTans = tailAnswer.value();
-      tailAnswer = {};
-      tempTans.resumption->TailResume();
-    }
     
-    if constexpr (!std::is_void<typename H::AnswerType>::value) {
-      return std::move(static_cast<Transfer<typename H::AnswerType>*>(transferBuffer)->GetValue());
+    if constexpr (!std::is_void<Answer>::value) {
+      std::optional<Answer> answer;
+      void* oldPtr = OneShot::answerPtr;
+      OneShot::answerPtr = &answer;
+
+      std::move(bodyFiber).resume();
+
+      // Trampoline tail-resumes
+      while (tailAnswer) {
+        TailAnswer tempTans = tailAnswer.value();
+        tailAnswer = {};
+        tempTans.resumption->TailResume();
+      }
+
+      Answer a = std::move(**(static_cast<std::optional<Answer>*>(OneShot::answerPtr)));
+      OneShot::answerPtr = oldPtr;
+      return std::move(a);
     } else {
+      std::move(bodyFiber).resume();
+
+      // Trampoline tail-resumes
+      while (tailAnswer) {
+        TailAnswer tempTans = tailAnswer.value();
+        tailAnswer = {};
+        tempTans.resumption->TailResume();
+      }
       return;
     }
   }
@@ -471,9 +462,9 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
     resumption->storedMetastack.back()->fiber = std::move(prev);      // (A)
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
     if constexpr (!std::is_void<Answer>::value) {
-      OneShot::transferBuffer = new Transfer<Answer>(
+      *(static_cast<std::optional<Answer>*>(OneShot::answerPtr)) =
         this->CommandClause(cmd,                                      // (B)
-          std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>(resumption)));
+          std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>(resumption));
     } else {
       this->CommandClause(cmd,
         std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>(resumption));
@@ -538,28 +529,34 @@ particular resumption, which means that it is safe to delete it now.
 template <typename Out, typename Answer>
 Answer Resumption<Out, Answer>::Resume()
 {
-  std::move(this->storedMetastack.back()->fiber).resume_with(
-      [&](ctx::fiber&& prev) -> ctx::fiber {
-    OneShot::Metastack().back()->fiber = std::move(prev);
-    OneShot::Metastack().splice(OneShot::Metastack().end(), this->storedMetastack);
-    return ctx::fiber();
-  });
-  
   if constexpr (!std::is_void<Answer>::value) {
-    return std::move(static_cast<Transfer<Answer>*>(OneShot::transferBuffer)->GetValue());
+    std::optional<Answer> answer;
+    void* oldPtr = OneShot::answerPtr;
+    OneShot::answerPtr = &answer;
+
+    std::move(this->storedMetastack.back()->fiber).resume_with(
+        [&](ctx::fiber&& prev) -> ctx::fiber {
+      OneShot::Metastack().back()->fiber = std::move(prev);
+      OneShot::Metastack().splice(OneShot::Metastack().end(), this->storedMetastack);
+      return ctx::fiber();
+    });
+  
+    Answer a = std::move(**(static_cast<std::optional<Answer>*>(OneShot::answerPtr)));
+    OneShot::answerPtr = oldPtr;
+    return std::move(a);
   } else {
-    return;
+    std::move(this->storedMetastack.back()->fiber).resume_with(
+        [&](ctx::fiber&& prev) -> ctx::fiber {
+      OneShot::Metastack().back()->fiber = std::move(prev);
+      OneShot::Metastack().splice(OneShot::Metastack().end(), this->storedMetastack);
+      return ctx::fiber();
+  });
   }
 }
 
 template <typename Out, typename Answer>
 void Resumption<Out, Answer>::TailResume()
 {
-  // Delete current transfer buffer
-  if constexpr (!std::is_void<Answer>::value) {
-    static_cast<Transfer<Answer>*>(OneShot::transferBuffer)->GetValue();
-  }
-
   std::move(this->storedMetastack.back()->fiber).resume_with(
       [&](ctx::fiber&& prev) -> ctx::fiber {
     OneShot::Metastack().back()->fiber = std::move(prev);
@@ -584,20 +581,16 @@ Answer PlainResumption<Out, Answer>::Resume()
 template <typename Out, typename Answer>
 void PlainResumption<Out, Answer>::TailResume()
 {
-  // Delete current transfer buffer
   if constexpr (!std::is_void<Answer>::value) {
-    static_cast<Transfer<Answer>*>(OneShot::transferBuffer)->GetValue();
-  }
-
-  if constexpr (!std::is_void<Answer>::value) {
-    OneShot::transferBuffer = new Transfer<Answer>(func(std::move(this->cmdResultTransfer->value)));
+    *(static_cast<std::optional<Answer>*>(OneShot::answerPtr)) =
+      func(std::move(this->cmdResultTransfer->value));
   } else {
     func(std::move(this->cmdResultTransfer->value));
   }
   delete this;
 }
 
-// Overloads for commands with out type void
+// Overloads for commands with Out = void
 
 template <typename Answer>
 Answer PlainResumption<void, Answer>::Resume()
@@ -614,13 +607,8 @@ Answer PlainResumption<void, Answer>::Resume()
 template <typename Answer>
 void PlainResumption<void, Answer>::TailResume()
 {
-  // Delete current transfer buffer
   if constexpr (!std::is_void<Answer>::value) {
-    static_cast<Transfer<Answer>*>(OneShot::transferBuffer)->GetValue();
-  }
-
-  if constexpr (!std::is_void<Answer>::value) {
-    OneShot::transferBuffer = new Transfer<Answer>(func());
+     *(static_cast<std::optional<Answer>*>(OneShot::answerPtr)) = func();
   } else {
     func();
   }

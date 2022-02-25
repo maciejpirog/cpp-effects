@@ -22,8 +22,8 @@
 // Note that because we used the NoResume modifier, the type of
 // CommandClause for MyCmd is now different.
 
-#ifndef CPP_EFFECTS_SPECIAL_CLAUSES_H
-#define CPP_EFFECTS_SPECIAL_CLAUSES_H
+#ifndef CPP_EFFECTS_CLAUSE_MODIFIERS_H
+#define CPP_EFFECTS_CLAUSE_MODIFIERS_H
 
 #include "cpp-effects/cpp-effects.h"
 
@@ -102,7 +102,8 @@ private:
 
     std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& /*prev*/) -> ctx::fiber {
       if constexpr (!std::is_void<Answer>::value) {
-        OneShot::transferBuffer = new Transfer<Answer>(this->CommandClause(cmd));
+        *(static_cast<std::optional<Answer>*>(OneShot::answerPtr)) =
+          this->CommandClause(cmd);
       } else {
         this->CommandClause(cmd);
       }
@@ -119,4 +120,4 @@ private:
 
 } // namespace CppEffects
 
-#endif // CPP_EFFECTS_SPECIAL_CLAUSES_H
+#endif // CPP_EFFECTS_CLAUSE_MODIFIERS_H

@@ -6,7 +6,7 @@
 
 namespace CppEffects {
 
-TransferBase* OneShot::transferBuffer;
+void* OneShot::answerPtr;
 std::optional<TailAnswer> OneShot::tailAnswer = {};
 int64_t OneShot::freshCounter = -2;
 

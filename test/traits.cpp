@@ -21,10 +21,10 @@ class XTCC { // exclude trivial constructor and copy
 public:
   XTCC(int v) : val(v) { }
   XTCC(XTCC&&) = default;
+  XTCC& operator=(XTCC&&) = default;
 
   XTCC() = delete;
   XTCC(const XTCC&) = delete;
-  XTCC& operator=(XTCC&&) = delete;
   XTCC& operator=(const XTCC&) = delete;
 
   int val;
