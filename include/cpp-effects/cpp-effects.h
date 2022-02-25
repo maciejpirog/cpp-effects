@@ -322,7 +322,7 @@ public:
 
       Answer a = std::move(**(static_cast<std::optional<Answer>*>(OneShot::answerPtr)));
       OneShot::answerPtr = oldPtr;
-      return std::move(a);
+      return a;
     } else {
       std::move(bodyFiber).resume();
 
@@ -543,7 +543,7 @@ Answer Resumption<Out, Answer>::Resume()
   
     Answer a = std::move(**(static_cast<std::optional<Answer>*>(OneShot::answerPtr)));
     OneShot::answerPtr = oldPtr;
-    return std::move(a);
+    return a;
   } else {
     std::move(this->storedMetastack.back()->fiber).resume_with(
         [&](ctx::fiber&& prev) -> ctx::fiber {
