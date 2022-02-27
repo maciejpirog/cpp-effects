@@ -118,7 +118,6 @@ class PlainResumption<void, Answer> : public Resumption<void, Answer> {
 
 // Labels:
 // 0   -- the initial fiber with no handler (the static in OneShot::Metastack())
-// -1  -- invalid handler (used to shadow a handler in the return clause)
 // >0  -- user-defined labels
 // <0  -- auto-generated labels
 
@@ -126,7 +125,8 @@ class Metaframe {
   friend class OneShot;
   template <typename, typename> friend class CmdClause;
   friend class InitMetastack;
-  template <typename, typename> friend class Resumption; 
+  template <typename, typename> friend class Resumption;
+  template <typename, typename> friend class PlainResumption; 
 public:
   virtual ~Metaframe() { }
   virtual void DebugPrint() const
@@ -140,6 +140,7 @@ protected:
   int64_t label;
 private:
   ctx::fiber fiber;
+  void* returnBuffer;
 };
 
 // When invoking a command in the client code, we know the type of the
@@ -238,7 +239,6 @@ public:
      static std::list<MetaframePtr> metastack{std::shared_ptr<Metaframe>(initMetaframe)};
      return metastack;
   };
-  static void* answerPtr;
   static std::optional<TailAnswer> tailAnswer;
   static int64_t freshCounter;
 
@@ -285,32 +285,31 @@ public:
       Metastack().back()->fiber = std::move(prev);
       handler->label = label;
       Metastack().push_back(handler);
+
       Tangible<Body> b(body);
-      // The rest of the fiber might live in a resumption, after
-      // the caller is long gone, hence we cannot use arguments
-      // of HandleWith by reference from now on. The return
-      // clause is executed in the same fiber, but it cannot use
-      // commands of the handler.
-      Metastack().back()->label = -1;
-      if constexpr (!std::is_void<Answer>::value) {
-        *(static_cast<std::optional<Answer>*>(answerPtr)) = 
-          std::static_pointer_cast<H>(Metastack().back())->RunReturnClause(std::move(b));
-      } else {
-        std::static_pointer_cast<H>(Metastack().back())->RunReturnClause(std::move(b));
-      }
+
+      MetaframePtr returnFrame = Metastack().back();
       Metastack().pop_back();
-      std::move(Metastack().back()->fiber).resume();
+
+      std::move(Metastack().back()->fiber).resume_with([&](ctx::fiber&&) -> ctx::fiber {
+        if constexpr (!std::is_void<Answer>::value) {
+          *(static_cast<std::optional<Answer>*>(Metastack().back()->returnBuffer)) =
+             std::static_pointer_cast<H>(returnFrame)->RunReturnClause(std::move(b));
+        } else {
+          std::static_pointer_cast<H>(returnFrame)->RunReturnClause(std::move(b));
+        }
+        return ctx::fiber();
+      });
       
       // This will never be reached, because this fiber will have been destroyed.
       std::cerr << "error: malformed handler\n";
       exit(-1);
     }};
-    
+
     if constexpr (!std::is_void<Answer>::value) {
       std::optional<Answer> answer;
-      void* oldPtr = OneShot::answerPtr;
-      OneShot::answerPtr = &answer;
-
+      void* prevBuffer = Metastack().back()->returnBuffer;
+      Metastack().back()->returnBuffer = &answer;
       std::move(bodyFiber).resume();
 
       // Trampoline tail-resumes
@@ -320,9 +319,8 @@ public:
         tempTans.resumption->TailResume();
       }
 
-      Answer a = std::move(**(static_cast<std::optional<Answer>*>(OneShot::answerPtr)));
-      OneShot::answerPtr = oldPtr;
-      return a;
+      Metastack().back()->returnBuffer = prevBuffer;
+      return std::move(*answer);
     } else {
       std::move(bodyFiber).resume();
 
@@ -361,7 +359,6 @@ public:
     if (gotoHandler == 0) {
       // Looking for handler based on the type of the command
       for (auto it = Metastack().rbegin(); it != Metastack().rend(); ++it) {
-        if ((*it)->label == -1) { continue; }
         if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
           return canInvoke->InvokeCmd(++it, cmd);
         }
@@ -372,7 +369,7 @@ public:
     } else {
       // Looking for handler based on its label
       auto cond = [&](MetaframePtr mf) {
-        return mf->label != -1 && mf->label == gotoHandler;
+        return mf->label == gotoHandler;
       };
       auto it = std::find_if(Metastack().rbegin(), Metastack().rend(), cond);
       if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
@@ -450,9 +447,11 @@ template <typename Answer, typename Cmd>
 typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
 {
+  using Out = typename Cmd::OutType;
+
   // (continued from OneShot::InvokeCmd) ...looking for [d]
   auto jt = it.base();
-  auto resumption = new Resumption<typename Cmd::OutType, Answer>();  // See (NOTE) below
+  auto resumption = new Resumption<Out, Answer>();  // See (NOTE) below
   resumption->storedMetastack.splice(
     resumption->storedMetastack.begin(), OneShot::Metastack(), jt, OneShot::Metastack().end());
   // at this point: [a][b][c]; stored stack = [d][e][f][g.] 
@@ -462,12 +461,12 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
     resumption->storedMetastack.back()->fiber = std::move(prev);      // (A)
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
     if constexpr (!std::is_void<Answer>::value) {
-      *(static_cast<std::optional<Answer>*>(OneShot::answerPtr)) =
+      *(static_cast<std::optional<Answer>*>(OneShot::Metastack().back()->returnBuffer)) =
         this->CommandClause(cmd,                                      // (B)
-          std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>(resumption));
+          std::unique_ptr<Resumption<Out, Answer>>(resumption));
     } else {
       this->CommandClause(cmd,
-        std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>(resumption));
+        std::unique_ptr<Resumption<Out, Answer>>(resumption));
     }
     return ctx::fiber();
   });
@@ -475,8 +474,8 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   // If the control reaches here, this means that the resumption is   // (C)
   // being resumed at the moment, and so we no longer need the
   // resumption object, because the fiber is no longer valid.
-  if constexpr (!std::is_void<typename Cmd::OutType>::value) {
-    typename Cmd::OutType cmdResult = std::move(resumption->cmdResultTransfer->value);
+  if constexpr (!std::is_void<Out>::value) {
+    Out cmdResult = std::move(resumption->cmdResultTransfer->value);
     delete resumption;                                                // (D)
     return cmdResult;
   } else {
@@ -531,8 +530,8 @@ Answer Resumption<Out, Answer>::Resume()
 {
   if constexpr (!std::is_void<Answer>::value) {
     std::optional<Answer> answer;
-    void* oldPtr = OneShot::answerPtr;
-    OneShot::answerPtr = &answer;
+    void* prevBuffer = OneShot::Metastack().back()->returnBuffer;
+    OneShot::Metastack().back()->returnBuffer = &answer;
 
     std::move(this->storedMetastack.back()->fiber).resume_with(
         [&](ctx::fiber&& prev) -> ctx::fiber {
@@ -541,16 +540,16 @@ Answer Resumption<Out, Answer>::Resume()
       return ctx::fiber();
     });
   
-    Answer a = std::move(**(static_cast<std::optional<Answer>*>(OneShot::answerPtr)));
-    OneShot::answerPtr = oldPtr;
-    return a;
+    //OneShot::answerPtr = oldPtr;
+    OneShot::Metastack().back()->returnBuffer = prevBuffer;
+    return std::move(*answer);
   } else {
     std::move(this->storedMetastack.back()->fiber).resume_with(
         [&](ctx::fiber&& prev) -> ctx::fiber {
       OneShot::Metastack().back()->fiber = std::move(prev);
       OneShot::Metastack().splice(OneShot::Metastack().end(), this->storedMetastack);
       return ctx::fiber();
-  });
+    });
   }
 }
 
@@ -582,7 +581,7 @@ template <typename Out, typename Answer>
 void PlainResumption<Out, Answer>::TailResume()
 {
   if constexpr (!std::is_void<Answer>::value) {
-    *(static_cast<std::optional<Answer>*>(OneShot::answerPtr)) =
+    *(static_cast<std::optional<Answer>*>(OneShot::Metastack().back()->returnBuffer)) =
       func(std::move(this->cmdResultTransfer->value));
   } else {
     func(std::move(this->cmdResultTransfer->value));
@@ -608,7 +607,8 @@ template <typename Answer>
 void PlainResumption<void, Answer>::TailResume()
 {
   if constexpr (!std::is_void<Answer>::value) {
-     *(static_cast<std::optional<Answer>*>(OneShot::answerPtr)) = func();
+     *(static_cast<std::optional<Answer>*>(OneShot::Metastack().back()->returnBuffer)) =
+       func();
   } else {
     func();
   }

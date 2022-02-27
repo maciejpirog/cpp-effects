@@ -69,8 +69,8 @@ int product(const std::vector<int>& v)
 
 int main()
 {
-  std::cout << product({1, 2, 3, 4, 5}) << std::endl;
-  std::cout << product({1, 2, 0, 4, 5}) << std::endl;
+  std::cout << product({1, 2, 3, 4, 5}) << std::flush << std::endl;
+  std::cout << product({1, 2, 0, 4, 5}) << std::flush << std::endl;
 
   // Output:
   // 120

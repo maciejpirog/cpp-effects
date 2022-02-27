@@ -105,7 +105,7 @@ testHandlers(100000, 1);
 auto end2 = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end2-begin2).count() << "ns" << std::endl;
 
-std::cout << "handlers n-r: " << std::flush;
+std::cout << "handlers-n-r: " << std::flush;
 
 auto begin3 = std::chrono::high_resolution_clock::now();
 testHandlersNR(100000, 1);

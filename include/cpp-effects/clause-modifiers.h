@@ -95,14 +95,13 @@ private:
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
     auto jt = it.base();
-    // worry about deletion here!
-    // for (auto i = jt; i != OneShot::Metastack().end(); ++i) { delete *i; }
     OneShot::Metastack().erase(jt, OneShot::Metastack().end());
     // at this point: metastack = [a][b][c]
 
-    std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& /*prev*/) -> ctx::fiber {
+    std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& /*prev*/) ->
+        ctx::fiber {
       if constexpr (!std::is_void<Answer>::value) {
-        *(static_cast<std::optional<Answer>*>(OneShot::answerPtr)) =
+        *(static_cast<std::optional<Answer>*>(OneShot::Metastack().back()->returnBuffer)) =
           this->CommandClause(cmd);
       } else {
         this->CommandClause(cmd);

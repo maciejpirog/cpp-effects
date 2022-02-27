@@ -6,7 +6,6 @@
 
 namespace CppEffects {
 
-void* OneShot::answerPtr;
 std::optional<TailAnswer> OneShot::tailAnswer = {};
 int64_t OneShot::freshCounter = -2;
 

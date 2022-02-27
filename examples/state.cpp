@@ -261,7 +261,7 @@ class Reader : public ReaderType<Answer, R> {
 public:
   Reader(R val) : val(val) { }
 private:
-  const R val;  // Note the const modifier!!!
+  const R val;  // Note the const modifier!
   Answer CommandClause(Read<R>, std::unique_ptr<Resumption<int,Answer>> r) override
   {
     return OneShot::TailResume(std::move(r), val);

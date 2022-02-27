@@ -116,6 +116,7 @@ int main()
   std::cout <<
     SwappableHandleWith(comp, std::shared_ptr<ReaderType<int, int>>(new Reader<int, int>(100)))
     << std::endl;
+
 }
 
 // Output:

@@ -127,7 +127,7 @@ Future<T>* async(std::function<T()> f)
 int worker()
 {
   for (int i = 0; i < 30; i++) {
-    std::cout << ".";
+    std::cout << "." << std::flush;
     yield();
   }
   return 100;
@@ -136,18 +136,18 @@ int worker()
 std::monostate starter()
 {
   auto future = async<int>(worker);
-  std::cout << "[worker started]";
+  std::cout << "[worker started]" << std::flush;
 
   for (int i = 0; i < 5; i++) {
     if (!*future) {
-      std::cout << std::endl << "[no value yet]";
+      std::cout << std::endl << "[no value yet]" << std::flush;
       yield();
     }
   }
-  std::cout << std::endl << "[I'd better wait]";
+  std::cout << std::endl << "[I'd better wait]" << std::flush;
   int workerResult = await(future);
   delete future;
-  std::cout << std::endl << "[worker returned " << workerResult << "]";
+  std::cout << std::endl << "[worker returned " << workerResult << "]" << std::flush;
   return {};
 }
 
