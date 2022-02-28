@@ -16,7 +16,7 @@ add_compile_options (-Wall -Wextra -pedantic -Werror -O3)
 FIND_PACKAGE (Boost 1.70 COMPONENTS context REQUIRED)
 
 if (Boost_FOUND)
-  add_subdirectory (src)
+  link_libraries (Boost::context)
   add_subdirectory (examples)
   add_subdirectory (test)
   add_subdirectory (benchmark)

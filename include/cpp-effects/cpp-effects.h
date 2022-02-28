@@ -239,8 +239,18 @@ public:
      static std::list<MetaframePtr> metastack{std::shared_ptr<Metaframe>(initMetaframe)};
      return metastack;
   };
-  static std::optional<TailAnswer> tailAnswer;
-  static int64_t freshCounter;
+
+  static int64_t& FreshLabel()
+  {
+    static int64_t freshCounter = -1;
+    return --freshCounter;
+  }
+
+  static std::optional<TailAnswer>& tailAnswer()
+  {
+    static std::optional<TailAnswer> answer = {};
+    return answer;
+  }
 
   OneShot() = delete;
 
@@ -313,9 +323,9 @@ public:
       std::move(bodyFiber).resume();
 
       // Trampoline tail-resumes
-      while (tailAnswer) {
-        TailAnswer tempTans = tailAnswer.value();
-        tailAnswer = {};
+      while (tailAnswer()) {
+        TailAnswer tempTans = tailAnswer().value();
+        tailAnswer() = {};
         tempTans.resumption->TailResume();
       }
 
@@ -325,9 +335,9 @@ public:
       std::move(bodyFiber).resume();
 
       // Trampoline tail-resumes
-      while (tailAnswer) {
-        TailAnswer tempTans = tailAnswer.value();
-        tailAnswer = {};
+      while (tailAnswer()) {
+        TailAnswer tempTans = tailAnswer().value();
+        tailAnswer() = {};
         tempTans.resumption->TailResume();
       }
       return;
@@ -433,7 +443,7 @@ public:
   {
     r->cmdResultTransfer->value = std::move(cmdResult);
     // Trampoline back to Handle
-    tailAnswer = TailAnswer{r.release()};
+    tailAnswer() = TailAnswer{r.release()};
     if constexpr (!std::is_void<Answer>::value) {
       return Answer();
     }
@@ -443,7 +453,7 @@ public:
   static Answer TailResume(std::unique_ptr<Resumption<void, Answer>> r)
   {
     // Trampoline back to Handle
-    tailAnswer = TailAnswer{r.release()};
+    tailAnswer() = TailAnswer{r.release()};
     if constexpr (!std::is_void<Answer>::value) {
       return Answer();
     }
@@ -461,11 +471,6 @@ public:
   {
     Resumption<void, Answer>* pr = new PlainResumption<void, Answer>(func);
     return std::unique_ptr<Resumption<void, Answer>>(pr);
-  }
-
-  static int64_t FreshLabel()
-  {
-    return --freshCounter;
   }
 
 }; // class OneShot

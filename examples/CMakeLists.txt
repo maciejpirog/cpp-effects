@@ -1,5 +1,3 @@
-link_libraries (CppEffects)
-
 add_executable (threads threads.cpp)
 add_executable (generators generators.cpp)
 add_executable (async-await async-await.cpp)
