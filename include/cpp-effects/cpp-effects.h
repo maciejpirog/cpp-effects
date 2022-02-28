@@ -382,6 +382,13 @@ public:
     }
   }
 
+  template <typename Cmd, typename H>
+  static typename Cmd::OutType StaticTopInvokeCmd(const Cmd& cmd)
+  {
+     auto it = Metastack().rbegin();
+     return std::static_pointer_cast<H>(*it)->InvokeCmd(++it, cmd);
+  }
+
   template <typename Cmd>
   static typename Cmd::OutType InvokeCmd(const Cmd& cmd)
   {
