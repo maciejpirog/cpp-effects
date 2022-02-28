@@ -170,7 +170,7 @@ void testStaticHandlers(int max)
 {
   OneShot::Handle<Han>([=](){
     for (int i = 0; i < max; i++) {
-      SUM += OneShot::StaticTopInvokeCmd<Foo, Han>(Foo{{}, i});
+      SUM += OneShot::StaticInvokeCmd<Foo, Han>(Foo{{}, i});
     }
   });
 }
@@ -184,7 +184,7 @@ void testStaticPlainHandlers(int max)
 {
   OneShot::Handle<PHan>([=](){
     for (int i = 0; i < max; i++) {
-      SUM += OneShot::StaticTopInvokeCmd<Foo, PHan>(Foo{{}, i});
+      SUM += OneShot::StaticInvokeCmd<Foo, PHan>(Foo{{}, i});
     }
   });
 }

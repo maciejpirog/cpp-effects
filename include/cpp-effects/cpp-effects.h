@@ -382,17 +382,37 @@ public:
     }
   }
 
-  template <typename Cmd, typename H>
-  static typename Cmd::OutType StaticTopInvokeCmd(const Cmd& cmd)
-  {
-     auto it = Metastack().rbegin();
-     return std::static_pointer_cast<H>(*it)->InvokeCmd(++it, cmd);
-  }
-
   template <typename Cmd>
   static typename Cmd::OutType InvokeCmd(const Cmd& cmd)
   {
     return OneShot::InvokeCmd<Cmd>(0, cmd);
+  }
+
+  template <typename Cmd, typename H>
+  static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd)
+  {
+     auto it = Metastack().rbegin();
+     return std::static_pointer_cast<H>(*it)->InvokeCmd(++it, cmd);
+
+    if (gotoHandler == 0) {
+      return std::static_pointer_cast<H>(*it)->InvokeCmd(++it, cmd);
+    } else {
+      // Looking for handler based on its label
+      auto cond = [&](MetaframePtr mf) { return mf->label == gotoHandler; };
+      auto it = std::find_if(Metastack().rbegin(), Metastack().rend(), cond);
+      return std::static_pointer_cast<H>(*it)->InvokeCmd(++it, cmd);
+
+      std::cerr << "error: handler with id " << gotoHandler
+                << " does not handle " << typeid(Cmd).name() << std::endl;
+      DebugPrintMetastack();
+      exit(-1);
+    }
+  }
+
+  template <typename Cmd, typename H>
+  static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd)
+  {
+    return OneShot::StaticInvokeCmd<Cmd, H>(0, cmd);
   }
 
   template <typename Out, typename Answer>

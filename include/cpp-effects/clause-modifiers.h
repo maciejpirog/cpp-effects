@@ -98,8 +98,7 @@ private:
     OneShot::Metastack().erase(jt, OneShot::Metastack().end());
     // at this point: metastack = [a][b][c]
 
-    std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& /*prev*/) ->
-        ctx::fiber {
+    std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& /*prev*/) -> ctx::fiber {
       if constexpr (!std::is_void<Answer>::value) {
         *(static_cast<std::optional<Answer>*>(OneShot::Metastack().back()->returnBuffer)) =
           this->CommandClause(cmd);
