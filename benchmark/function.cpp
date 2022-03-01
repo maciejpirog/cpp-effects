@@ -170,7 +170,7 @@ void testStaticHandlers(int max)
 {
   OneShot::Handle<Han>([=](){
     for (int i = 0; i < max; i++) {
-      SUM += OneShot::StaticInvokeCmd<Foo, Han>(Foo{{}, i});
+      SUM += OneShot::StaticInvokeCmd<Han>(Foo{{}, i});
     }
   });
 }
@@ -184,7 +184,7 @@ void testStaticPlainHandlers(int max)
 {
   OneShot::Handle<PHan>([=](){
     for (int i = 0; i < max; i++) {
-      SUM += OneShot::StaticInvokeCmd<Foo, PHan>(Foo{{}, i});
+      SUM += OneShot::StaticInvokeCmd<PHan>(Foo{{}, i});
     }
   });
 }
@@ -270,5 +270,5 @@ std::cout << "s-plain-handlers: " << std::flush;
 auto begins3 = std::chrono::high_resolution_clock::now();
 testStaticPlainHandlers(MAX);
 auto ends3 = std::chrono::high_resolution_clock::now();
-std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(ends3-begins3).count() << "ns" << " \t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(ends3-begins3).count() / MAX) << "ns per iteration)" <<std::endl;
+std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(ends3-begins3).count() << "ns" << " \t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(ends3-begins3).count() / MAX) << "ns per iteration)" << std::endl;
 }

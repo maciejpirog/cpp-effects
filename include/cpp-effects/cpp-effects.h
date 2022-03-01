@@ -398,13 +398,11 @@ public:
     return OneShot::InvokeCmd<Cmd>(0, cmd);
   }
 
-  template <typename Cmd, typename H>
+  template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd)
   {
-     auto it = Metastack().rbegin();
-     return std::static_pointer_cast<H>(*it)->InvokeCmd(++it, cmd);
-
     if (gotoHandler == 0) {
+      auto it = Metastack().rbegin();
       return std::static_pointer_cast<H>(*it)->InvokeCmd(++it, cmd);
     } else {
       // Looking for handler based on its label
@@ -419,10 +417,10 @@ public:
     }
   }
 
-  template <typename Cmd, typename H>
+  template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd)
   {
-    return OneShot::StaticInvokeCmd<Cmd, H>(0, cmd);
+    return OneShot::StaticInvokeCmd<H, Cmd>(0, cmd);
   }
 
   template <typename Out, typename Answer>
