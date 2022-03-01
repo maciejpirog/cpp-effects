@@ -126,8 +126,8 @@ private:
 
 void testStateful()
 {
-  OneShot::HandleWith(test, std::make_shared<HStateful<void, int>>(100));
-  std::cout << OneShot::HandleWith(test2, std::make_shared<HStateful<std::string, int>>(100));
+  OneShot::Handle<HStateful<void, int>>(test, 100);
+  std::cout << OneShot::Handle<HStateful<std::string, int>>(test2, 100);
   std::cout << std::endl;
 
   // Output:
@@ -186,8 +186,8 @@ class HLambda<void, S> : public Handler<std::function<void(S)>, void, Put<S>, Ge
 
 void testLambda()
 {
-  OneShot::HandleWith(test, std::make_shared<HLambda<void, int>>())(100);
-  std::cout << OneShot::HandleWith(test2, std::make_shared<HLambda<std::string, int>>())(100);
+  OneShot::Handle<HLambda<void, int>>(test)(100);
+  std::cout << OneShot::Handle<HLambda<std::string, int>>(test2)(100);
   std::cout << std::endl;
 
   // Output:

@@ -55,7 +55,7 @@ private:
 
 int product(const std::vector<int>& v)
 {
-  return OneShot::HandleWith(
+  return OneShot::Handle<WithDefault<int>>(
     [&v]() {
       int r = 1;
       for (auto i : v) { 
@@ -64,7 +64,7 @@ int product(const std::vector<int>& v)
       }
       return r;
     },
-    std::make_shared<WithDefault<int>>(0));
+    0); // the default value is 0
 }
 
 int main()

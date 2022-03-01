@@ -50,6 +50,7 @@ template <typename T>
 class Scheduler : public Handler<void, T, Yield, Await> {
   template <typename TT> friend Future<TT>* async(std::function<TT()> f);
 public:
+  Scheduler(Future<T>* currentFuture) : currentFuture(currentFuture) { }
   static T Run(std::function<T()> f)
   {
     Future<T> future;
@@ -60,9 +61,7 @@ private:
   Future<T>* currentFuture;
   static void Run(Future<T>* future, std::function<T()> f)
   {
-    auto scheduler = std::make_shared<Scheduler<T>>();
-    scheduler->currentFuture = future;
-    OneShot::HandleWith(f, std::move(scheduler));
+    OneShot::Handle<Scheduler<T>>(f, future);
   }
   void wakeRandom()
   {

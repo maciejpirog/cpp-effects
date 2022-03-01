@@ -135,7 +135,7 @@ void Scheduler::Run(ActorBase* f)
 {
   f->scheduler = this;
   currentActor = f;
-  OneShot::HandleWith(this->label, [f](){ f->body(); }, std::make_shared<ActorHandler>(this));
+  OneShot::Handle<ActorHandler>(this->label, [f](){ f->body(); }, this);
 }
 
 template <typename T>

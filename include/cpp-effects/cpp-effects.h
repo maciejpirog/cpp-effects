@@ -261,23 +261,23 @@ public:
     std::cerr << std::endl;
   }
 
-  template <typename H>
-  static typename H::AnswerType Handle(int64_t label, std::function<typename H::BodyType()> body)
+  template <typename H, typename... Args>
+  static typename H::AnswerType Handle(int64_t label, std::function<typename H::BodyType()> body, Args&&... args)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
-      return HandleWith(label, body, std::make_shared<H>());
+      return HandleWith(label, body, std::make_shared<H>(std::forward<Args>(args)...));
     } else {
-      HandleWith(label, body, std::make_shared<H>());
+      HandleWith(label, body, std::make_shared<H>(std::forward<Args>(args)...));
     }
   }
 
-  template <typename H>
-  static typename H::AnswerType Handle(std::function<typename H::BodyType()> body)
+  template <typename H, typename... Args>
+  static typename H::AnswerType Handle(std::function<typename H::BodyType()> body, Args&&... args)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
-      return Handle<H>(OneShot::FreshLabel(), body);
+      return Handle<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
     } else {
-      Handle<H>(OneShot::FreshLabel(), body);
+      Handle<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
     }
   }
 

@@ -80,9 +80,9 @@ int64_t fib(int64_t n)
 void tryFib(int64_t n)
 {
   std::cout << "fib(" << n << ") = ";
-  std::optional res = OneShot::HandleWith(
+  std::optional res = OneShot::Handle<BoundedExecution<int64_t>>(
     std::bind(fib, n),
-    std::make_shared<BoundedExecution<int64_t>>(10000)); // supply 10000 units of fuel
+    10000); // supply 10000 units of fuel
   
   if (res) {
     std::cout << res.value() << std::endl;
