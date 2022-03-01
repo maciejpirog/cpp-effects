@@ -16,7 +16,7 @@ The core of the library. It includes:
 
 - [`OneShot`](refman-cpp-effects.md#class-oneshot) - The actual interface (via static functions) of handling computations and invoking commands.
 
-**Header** [`refman-clause-modifiers.md`](refman-clause-modifiers.md)
+**Header** [`cpp-effects/clause-modifiers.h`](refman-clause-modifiers.md)
 
 Modifiers that force specific shapes of command clauses in handlers.
 

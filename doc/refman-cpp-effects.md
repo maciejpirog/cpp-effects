@@ -184,6 +184,12 @@ public:
 
   template <typename Answer>
   static Answer Resume(std::unique_ptr<Resumption<void, Answer>> r);
+  
+  template <typename H, typename Cmd>
+  static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd);
+  
+  template <typename H, typename Cmd>
+  static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd);
 
   template <typename Out, typename Answer>
   static Answer TailResume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult);
@@ -206,16 +212,18 @@ When a command is invoked, the handler is chosen based on the type of the operat
 #### :large_orange_diamond: OneShot::Handle
 
 ```cpp
-template <typename H>
-static typename H::AnswerType Handle(std::function<typename H::BodyType()> body);
+template <typename H, typename... Args>
+static typename H::AnswerType Handle(std::function<typename H::BodyType()> body, Args&&... args);
   
-template <typename H>
-static typename H::AnswerType Handle(int64_t label, std::function<typename H::BodyType()> body);
+template <typename H, typename... Args>
+static typename H::AnswerType Handle(int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
 ```
 
-Create a new handler of type `H` (using its trivial constructor) and use it to hadle the computation `body`.
+Create a new handler of type `H` and use it to handle the computation `body`.
 
 - `typename H` - The type of the handler that is used to handle `body`.
+
+- `typename... Args` - Arguments supplied to the constructor of `H`.
 
 - `int64_t label` - Explicit label of the handler. If no label is given, this handler is used based on the types of the operations of `H` (the innermost handler that handles an invoked operation is used).
 
@@ -315,6 +323,31 @@ Resume a resumption.
 
 - **Return value** `Answer` - The result of the resumed computation.
 
+#### :large_orange_diamond: OneShot::StaticInvokeCmd
+
+```cpp
+template <typename H, typename Cmd>
+static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd);
+  
+template <typename H, typename Cmd>
+static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd);
+```
+
+Used in a handled computation to invoke a particular command (similar to [`OneShot::InvokeCmd`](#large_orange_diamond-oneshotinvokecmd)), but the handler with the given label is statically cast to `H`. The current computation (up  to and including the appropriate handler) is suspended, captured in a resumption, and the control goes to the handler.
+
+- `typename H` - The type of the handler used to handled the command.
+
+- `typename Cmd` - The type of the invoked command.
+
+- `int64_t label` - The label of the handler to which the control should go. If there is no handler with label `label`, the program exits with exit code `-1`. If the inner-most handler with label `label` is not of type (derived from) `H`, it results in undefined behaviour. If `label` is note supplied, the inner-most handler is used.
+
+- `const Cmd& cmd` - The invoked command.
+
+The point of `StaticInvokeCmd` is that we often know upfront which handler will be used for a particular command. This way, instead of dynamically checking if a given handler is able to handle the invoke command, we can statically cast it to an appropriate handler `H`, trading dynamic type safety for performance.
+
+- **Return value** `Cmd::OutType` - the value with which the suspended computation is resumed (the argument to `OneShot::Resume`).
+
+
 #### :large_orange_diamond: OneShot::TailResume
 
 ```cpp
@@ -326,7 +359,21 @@ template <typename Answer>
 static Answer TailResume(std::unique_ptr<Resumption<void, Answer>> r);
 ```
 
-Tail-resume a resumption. This is to be used **only inside a command clause** as the last thing in its body. Tail-resumes are useful in command clauses such as:
+Tail-resume a resumption. This is to be used **only inside a command clause** as the returned expression. Semantically, `return OneShot::Resume(...);` is equivalent to `return OneShot::TailResume(...);`, but it does not build up the call stack.
+
+
+- `typename Out` - The input type of the resumption. (Note that the name `Out` is used throughout the library for the output type of a command, which is the **input** type of a resumption, hence the possibly confusing name.)
+
+- `typename Answer` - The answer type of the resulting resumption.
+
+- `std::unique_ptr<Resumption<Out, Answer>> r` - The resumed resumption.
+
+- `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
+
+- **Return value** `Answer` - The result of the resumed computation.
+
+
+Tail-resumes are useful in command clauses such as:
 
 ```cpp
 int CommandClause(SomeCommand, std::unique_ptr<Resumption<void, int>> r) override
@@ -343,17 +390,7 @@ In this example, we will build up the call stack until the entire handler return
   return OneShot::TailResume(std::move(r));
 ```
 
-- `typename Out` - The input type of the resumption. (Note that the name `Out` is used throughout the library for the output type of a command, which is the **input** type of a resumption, hence the possibly confusing name.)
-
-- `typename Answer` - The answer type of the resulting resumption.
-
-- `std::unique_ptr<Resumption<Out, Answer>> r` - The resumed resumption.
-
-- `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
-
-- **Return value** `Answer` - The result of the resumed computation.
-
-**NOTE:** `TailResume` can be used only if `Answer` is copy- and trivially constructible. Consider the following command clause:
+**NOTE:** `TailResume` can be used only if `Answer` is trivially constructible. Consider the following command clause:
 
 ```cpp
 class H : Handler<Answer, void, Op> {
