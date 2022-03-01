@@ -7,6 +7,7 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <chrono>
 
 #include "cpp-effects/cpp-effects.h"
 
