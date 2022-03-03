@@ -46,8 +46,8 @@ void testNative(int max, int mod_)
 struct Error : Command<void> { };
 
 class Catch : public Handler<void, void, Error> {
-  void ReturnClause () override { }
-  void CommandClause(Error, std::unique_ptr<Resumption<void, void>>) override { esum++; }
+  void ReturnClause () final override { }
+  void CommandClause(Error, std::unique_ptr<Resumption<void, void>>) final override { esum++; }
 };
 
 void testHandlers(int max, int mod_)
@@ -67,8 +67,8 @@ void testHandlers(int max, int mod_)
 // -----------------
 
 class CatchNR : public Handler<void, void, NoResume<Error>> {
-  void ReturnClause () override { }
-  void CommandClause(Error) override { esum++; }
+  void ReturnClause () final override { }
+  void CommandClause(Error) final override { esum++; }
 };
 
 void testHandlersNR(int max, int mod_)

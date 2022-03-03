@@ -47,28 +47,28 @@ protected:
   virtual typename Cmd::OutType CommandClause(Cmd) = 0;
 private:
   virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) override
+    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) final override
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
     const auto jt = it.base();
     std::list<MetaframePtr> storedMetastack;
     storedMetastack.splice(
-      storedMetastack.begin(), OneShot::Metastack(), jt, OneShot::Metastack().end());
+      storedMetastack.begin(), OneShot::Metastack, jt, OneShot::Metastack.end());
     // at this point: metastack = [a][b][c]; stored stack = [d][e][f][g.]
-    std::swap(storedMetastack.back()->fiber, OneShot::Metastack().back()->fiber);
+    std::swap(storedMetastack.back()->fiber, OneShot::Metastack.back()->fiber);
     // at this point: metastack = [a][b][c.]; stored stack = [d][e][f][g]
 
     if constexpr (!std::is_void<typename Cmd::OutType>::value) {
       typename Cmd::OutType a(CommandClause(cmd));
-      std::swap(storedMetastack.back()->fiber, OneShot::Metastack().back()->fiber);
+      std::swap(storedMetastack.back()->fiber, OneShot::Metastack.back()->fiber);
       // at this point: metastack = [a][b][c]; stored stack = [d][e][f][g.]
-      OneShot::Metastack().splice(OneShot::Metastack().end(), storedMetastack);
+      OneShot::Metastack.splice(OneShot::Metastack.end(), storedMetastack);
       // at this point: metastack = [a][b][c][d][e][f][g.]
       return std::move(a);
     } else {
       CommandClause(cmd);
-      std::swap(storedMetastack.back()->fiber, OneShot::Metastack().back()->fiber);
-      OneShot::Metastack().splice(OneShot::Metastack().end(), storedMetastack);
+      std::swap(storedMetastack.back()->fiber, OneShot::Metastack.back()->fiber);
+      OneShot::Metastack.splice(OneShot::Metastack.end(), storedMetastack);
     }
   }
 };
@@ -91,16 +91,16 @@ protected:
   virtual Answer CommandClause(Cmd) = 0;
 private:
   [[noreturn]] virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) override
+    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) final override
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
     auto jt = it.base();
-    OneShot::Metastack().erase(jt, OneShot::Metastack().end());
+    OneShot::Metastack.erase(jt, OneShot::Metastack.end());
     // at this point: metastack = [a][b][c]
 
-    std::move(OneShot::Metastack().back()->fiber).resume_with([&](ctx::fiber&& /*prev*/) -> ctx::fiber {
+    std::move(OneShot::Metastack.back()->fiber).resume_with([&](ctx::fiber&& /*prev*/) -> ctx::fiber {
       if constexpr (!std::is_void<Answer>::value) {
-        *(static_cast<std::optional<Answer>*>(OneShot::Metastack().back()->returnBuffer)) =
+        *(static_cast<std::optional<Answer>*>(OneShot::Metastack.back()->returnBuffer)) =
           this->CommandClause(cmd);
       } else {
         this->CommandClause(cmd);
