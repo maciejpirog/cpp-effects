@@ -53,6 +53,23 @@ void testAnswerType()
 
 // ------------------------------------------------------------------
 
+class TestFlatAnswerType : public FlatHandler<XTCC, Cmd> {
+  XTCC CommandClause(Cmd, std::unique_ptr<Resumption<int, XTCC>> r) override {
+    return XTCC(OneShot::Resume(std::move(r), 100).val + 1);
+  }
+};
+
+void testFlatAnswerType()
+{
+  std::cout << OneShot::HandleWith(
+      [](){ return OneShot::InvokeCmd(Cmd{}) + 10; },
+      std::make_shared<TestFlatAnswerType>()).val
+    << "\t(expected: 111)" << std::endl;
+}
+
+
+// ------------------------------------------------------------------
+
 class TestAnswerTypeVoid : public Handler<XTCC, void, Cmd> {
   XTCC CommandClause(Cmd, std::unique_ptr<Resumption<int, XTCC>> r) override {
     return XTCC(OneShot::Resume(std::move(r), 100).val + 1);
@@ -242,6 +259,7 @@ int main()
 {
   std::cout << "--- traits ---" << std::endl;
   testAnswerType();
+  testFlatAnswerType();
   testAnswerTypeVoid();
   testBodyType();
   testBodyTypeVoid();

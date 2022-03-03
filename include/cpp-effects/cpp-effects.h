@@ -198,7 +198,7 @@ private:
 
 template <typename Answer, typename... Cmds>
 class FlatHandler : public Handler<Answer, Answer, Cmds>... {
-  Answer ReturnClause(Answer a) final override { return std::move(a); }
+  Answer ReturnClause(Answer a) final override { return a; }
 };
 
 template <typename... Cmds>
@@ -615,7 +615,6 @@ void Resumption<Out, Answer>::TailResume()
   });
 }
 
-
 // --------------
 // Initialisation
 // --------------
@@ -633,7 +632,6 @@ public:
     }
   }  
 } inline initMetastack;
-
 
 } // namespace CppEffects
 
