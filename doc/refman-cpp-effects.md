@@ -104,9 +104,9 @@ protected:
 };
 ```
 
-- `typename Answer` - The overall answer type of a derived handler. Should be at least move-constructible.
+- `typename Answer` - The overall answer type of a derived handler. Should be at least move-constructible and move-assignable.
 
-- `typename Body` - The type of the handled computation. Should be at least move-constructible.
+- `typename Body` - The type of the handled computation. Should be at least move-constructible and move-assignable.
 
 - `typename... Cmds` - The commands that are handled by this handler.
 
@@ -141,6 +141,93 @@ If a handled computation gives a result without invoking an operation, `ReturnCl
 - `Body b` - the value that is the result of the handled computation.
 
 - **return value** `Answer` - The overall answer of the handler.
+
+## class `FlatHandler`
+
+Base class for handlers in which the return clause is identity. It is useful for handlers that are generic in the answer type, and spares the programmer writing a separate specialisation for when the answer type is `void`.
+
+```cpp
+template <typename Answer, typename... Cmds>
+class FlatHandler : public Handler<Answer, Answer, Cmds>... {
+  Answer ReturnClause(Answer a) final override;
+};
+
+template <typename... Cmds>
+class FlatHandler<void, Cmds...> : public Handler<void, void, Cmds>... {
+  void ReturnClause() final override;
+};
+```
+
+- `typename Answer` - The overall answer type of a derived handler and the type of the handled computstion. Should be at least move-constructible and move-assignable.
+
+- `typename... Cmds` - The commands that are handled by this handler.
+
+
+The `ReturnClause`-s are defined as:
+
+```cpp
+template <typename Answer, typename... Cmds>
+Answer FlatHandler<Answer, Cmds...>::ReturnClause(Answer a)
+{
+  return a;
+}
+
+template <typename... Cmds>
+Answer FlatHandler<void, Cmds...>::ReturnClause() { }
+{
+  return a;
+}
+```
+
+
+<details>
+  <summary><strong>Example</strong></summary>
+
+Consider the following tick handler that is generic in the return type:
+
+```cpp
+struct Tick : Command<int> { };
+
+template <typename T>
+class Counter : public FlatHandler <T, Plain<Tick>> {
+  int counter = 0;
+  int CommandClause(Tick) final override
+  {
+    return ++counter;
+  }
+};
+```
+
+With the `Handler` class we would have to provide a separate specialisation for `void`:
+
+```cpp
+struct Tick : Command<int> { };
+
+template <typename T>
+class Counter : public Handler <T, Plain<Tick>> {
+  int counter = 0;
+  int CommandClause(Tick) final override
+  {
+    return ++counter;
+  }
+  T ReturnClause(T a)
+  {
+    return a;
+  }
+};
+
+template <>
+class Counter<void> : public Handler <void, Plain<Tick>> {
+  int counter = 0;
+  int CommandClause(Tick) final override
+  {
+    return ++counter;
+  }
+  void ReturnClause() { }
+};
+```
+
+</details>
 
 ## class `OneShot`
 

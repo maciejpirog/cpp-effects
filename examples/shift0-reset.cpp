@@ -45,7 +45,7 @@ template <typename Answer, typename Hole>
 Hole shift0(std::function<Answer(std::function<Answer(Hole)>)> e)
 {
   return OneShot::InvokeCmd(Shift0<Answer, Hole>{{},
-    [=](std::unique_ptr<Resumption<Hole, Answer>> k) ->  Answer {
+    [=](std::unique_ptr<Resumption<Hole, Answer>> k) -> Answer {
       return e([k = k.release()](Hole out) -> Answer {
         return OneShot::Resume(std::unique_ptr<Resumption<Hole, Answer>>(k), out);
       });
@@ -61,8 +61,7 @@ int main()
 {
   std::cout <<
     reset<std::string, int>([]() {
-      return "2 + 2 = " + std::to_string(2 + shift0<std::string, int>([](auto k){
-        return "It is not true that " + k(3);
-      }));
+      return "2 + 2 = " + std::to_string(
+        2 + shift0<std::string, int>([](auto k) { return "It is not true that " + k(3); }));
     }) << std::endl;;
 }
