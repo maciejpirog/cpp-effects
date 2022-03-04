@@ -5,7 +5,7 @@ A library for programming with effect handlers in C++
 
 **Effect handlers** allow for programming with user-defined computational effects, with applications including custom lightweight concurrency (threads, async-await, actors, generators), error handling, dependency injection, etc. Effect handlers originate from the realm of functional programming, and the main goal of this **highly experimental** library is to explore how they fit in the more object-oriented setting of C++.
 
-The library relies on modern C++ features (move semantics, variadic templates, compile-time evaluation) to achieve elegant programmer-level interface, memory management of handlers, and relative type-safety. Internally, it uses the [boost::context](https://www.boost.org/doc/libs/1_74_0/libs/context/doc/html/index.html) library for call-stack manipulation, and so it implements one-shot handlers only.
+The library relies on modern C++ features (move semantics, variadic templates, compile-time evaluation) to achieve elegant programmer-level interface, memory management of handlers, and relative type-safety. Internally, it uses the [boost.context](https://www.boost.org/doc/libs/1_74_0/libs/context/doc/html/index.html) library for call-stack manipulation, and so it implements one-shot handlers only.
 
 ## Documentation
 
@@ -124,9 +124,11 @@ int main()
 
 [1] - In the library handlers are objects, so they can naturally contain any data, auxiliary functions, and additional programmer's interface.
 
-## Build
+## Build instructions
 
-The easiest way to compile the library and the examples is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
+The library is header-only, so to use it just include the headers and link with boost.context.
+
+This repository contains some examples, tests, and benchamrks. The easiest way to build these is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
 
 ```bash
 $ brew install cmake
@@ -135,7 +137,9 @@ $ cmake .
 $ make
 ```
 
-This will build the library and the examples. You can check that it works by running an example. The following will run the `threads` example - you can see the interleaving of threads in the output:
+(On Ubuntu the package is called `libboost-context-dev`.)
+
+You can check that it works by running an example. The following will run the `threads` example - you can see the interleaving of threads in the output:
 
 ```bash
 $ bin/threads

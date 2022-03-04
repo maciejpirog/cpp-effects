@@ -300,8 +300,8 @@ public:
         return ctx::fiber();
       });
       
-      // This will never be reached, because this fiber will have been destroyed.
-      std::cerr << "error: malformed handler\n";
+      // Unreachable, this fiber is now destroyed
+      std::cerr << "error: impssible!\n";
       exit(-1);
     }};
 

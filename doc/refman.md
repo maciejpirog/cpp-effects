@@ -4,21 +4,19 @@
 
 **Namespace:** `CppEffects`
 
-**Header** [`cpp-effects/cpp-effects.h`](refman-cpp-effects.md)
-
-The core of the library. It includes:
+:memo: [`cpp-effects/cpp-effects.h`](refman-cpp-effects.md): The core of the library.
 
 - [`Command`](refman-cpp-effects.md#class-command) - Classes derived from `Command` define commands.
 
 - [`Handler`](refman-cpp-effects.md#class-handler) - Classes derived from `Handler` define handlers.
 
+- [`FlatHandler`](refman-cpp-effects.md#class-flathandler) - Specialisation of `Handler` for generic handlers with identity return clause.
+
 - [`Resumption`](refman-cpp-effects.md#classes-resumptionbase-and-resumption) - The class for suspended computations that are given to the user in handlers' command clauses.
 
 - [`OneShot`](refman-cpp-effects.md#class-oneshot) - The actual interface (via static functions) of handling computations and invoking commands.
 
-**Header** [`cpp-effects/clause-modifiers.h`](refman-clause-modifiers.md)
-
-Modifiers that force specific shapes of command clauses in handlers.
+:memo: [`cpp-effects/clause-modifiers.h`](refman-clause-modifiers.md): Modifiers that force specific shapes of command clauses in handlers.
 
 - [`NoResume`](refman-clause-modifiers.md#noresume-modifier) - Define command clauses that do not use their resumptions.
 
