@@ -128,7 +128,7 @@ int main()
 
 The library is header-only, so to use it just include the headers and link with boost.context.
 
-This repository contains some examples, tests, and benchamrks. The easiest way to build these is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
+This repository contains some examples, tests, and benchmarks. The easiest way to build these is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
 
 ```bash
 $ brew install cmake

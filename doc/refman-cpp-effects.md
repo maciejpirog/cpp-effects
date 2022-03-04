@@ -174,9 +174,6 @@ Answer FlatHandler<Answer, Cmds...>::ReturnClause(Answer a)
 
 template <typename... Cmds>
 Answer FlatHandler<void, Cmds...>::ReturnClause() { }
-{
-  return a;
-}
 ```
 
 
