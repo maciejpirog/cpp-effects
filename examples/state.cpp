@@ -31,6 +31,7 @@ to the current reader and Abet.
 #include <iostream>
 
 #include "cpp-effects/cpp-effects.h"
+#include "cpp-effects/clause-modifiers.h"
 
 using namespace CppEffects;
 
@@ -38,20 +39,20 @@ using namespace CppEffects;
 // Commands and programmer's interface
 // -----------------------------------
 
-template<typename S>
+template <typename S>
 struct Put : Command<void> {
   S newState;
 };
 
-template<typename S>
+template <typename S>
 struct Get : Command<S> { };
 
-template<typename S>
+template <typename S>
 void put(S s) {
   OneShot::InvokeCmd(Put<S>{{}, s});
 }
 
-template<typename S>
+template <typename S>
 S get() {
   return OneShot::InvokeCmd(Get<S>{});
 }
@@ -83,46 +84,23 @@ std::string test2()
 // 1. Stateful handler
 // -------------------
 
-template<typename Answer, typename S>
-class HStateful : public Handler<Answer, Answer, Put<S>, Get<S>> {
+template <typename Answer, typename S>
+class HStateful : public FlatHandler<Answer, Plain<Put<S>>, Plain<Get<S>>> {
 public:
   HStateful(S initialState) : state(initialState) { }
 private:
   S state;
-  Answer CommandClause(Put<S> p, std::unique_ptr<Resumption<void, Answer>> r) override
+  void CommandClause(Put<S> p) final override
   {
     state = p.newState;
-    return OneShot::TailResume(std::move(r));
   }
-  Answer CommandClause(Get<S>, std::unique_ptr<Resumption<S, Answer>> r) override
+  S CommandClause(Get<S>) final override
   {
-    return OneShot::TailResume(std::move(r), state);
-  }
-  Answer ReturnClause(Answer a) override
-  {
-    return a;
+    return state;
   }
 };
 
 // Specialisation for Answer = void
-
-template<typename S>
-class HStateful<void, S> : public Handler<void, void, Put<S>, Get<S>> {
-public:
-  HStateful(S initialState) : state(initialState) { }
-private:
-  S state;
-  void CommandClause(Put<S> p, std::unique_ptr<Resumption<void, void>> r) override
-  {
-    state = p.newState;
-    OneShot::TailResume(std::move(r));
-  }
-  void CommandClause(Get<S>, std::unique_ptr<Resumption<S, void>> r) override
-  {
-    OneShot::TailResume(std::move(r), state);
-  }
-  void ReturnClause() override { }
-};
 
 void testStateful()
 {

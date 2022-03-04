@@ -200,7 +200,7 @@ With the `Handler` class we would have to provide a separate specialisation for 
 struct Tick : Command<int> { };
 
 template <typename T>
-class Counter : public Handler <T, Plain<Tick>> {
+class Counter : public Handler<T, Plain<Tick>> {
   int counter = 0;
   int CommandClause(Tick) final override
   {
@@ -213,7 +213,7 @@ class Counter : public Handler <T, Plain<Tick>> {
 };
 
 template <>
-class Counter<void> : public Handler <void, Plain<Tick>> {
+class Counter<void> : public Handler<void, Plain<Tick>> {
   int counter = 0;
   int CommandClause(Tick) final override
   {
