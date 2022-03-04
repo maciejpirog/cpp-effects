@@ -1,5 +1,7 @@
 # Quick Introduction (and Comparison with Effectful Functional Programming)
 
+[<< Back to reference manual](refman.md)
+
 This document gives a quick overview of the API of the library. It assumes that the reader has some basic understanding of algebraic effects and effect handlers.
 
 Effect handlers first appeared in the area of functional programming (e.g., Eff, Koka, Multicore OCaml). There are, however, some differences between how handlers are usually formulated in FP and what our library provides, trying to combine effects with object-oriented programming - and C++ programming in particular.
@@ -26,7 +28,7 @@ struct Command {
 
 To perform (*invoke*) a command, we need to use an object of such a "command" class. The out type of the command becomes the result of the invocation:
 
-```
+```cpp
 template <typename Cmd>
 static typename Cmd::OutType OneShot::InvokeCmd(const Cmd&);
 ```
