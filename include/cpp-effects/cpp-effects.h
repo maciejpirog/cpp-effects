@@ -387,7 +387,7 @@ public:
     auto cond = [&](const MetaframePtr& mf) { return mf->label == gotoHandler; };
     auto it = std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
     if (it != Metastack.rend()) {
-      return (*static_cast<H*>(it->get())).InvokeCmd(std::next(it), cmd); // circumvent vtable
+      return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
     }
     std::cerr << "error: handler with id " << gotoHandler
               << " does not handle " << typeid(Cmd).name() << std::endl;
@@ -399,7 +399,7 @@ public:
   static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd)
   {
     auto it = Metastack.rbegin();
-    return (*static_cast<H*>(it->get())).InvokeCmd(std::next(it), cmd); // circumvent vtable
+    return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
   }
 
   template <typename Out, typename Answer>

@@ -381,7 +381,7 @@ class GeneratorHandler : public Handler<void, void, Yield<T>> {
   {
   }
 public:
-  Generator<T>* gen;
+  Generator<T>* const gen;
   GeneratorHandler(Generator<T>* gen) : gen(gen) { }
 };
 
@@ -428,12 +428,12 @@ public:
   }
   T Value() const
   {
-    //if (!result) { throw std::out_of_range("Generator::Value"); }
+    // if (!result) { throw std::out_of_range("Generator::Value"); }
     return (*result).value;
   }
   bool Next()
   {
-    //if (!result) { throw std::out_of_range("Generator::Value"); }
+    // if (!result) { throw std::out_of_range("Generator::Next"); }
     OneShot::Resume(
       std::unique_ptr<Resumption<void, void>>((*result).resumption));
     return result.has_value();
