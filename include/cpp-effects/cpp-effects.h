@@ -502,7 +502,7 @@ public:
       });
     });
 
-    return std::move(resumption);
+    return resumption;
   }
 
   template <typename Answer>
@@ -531,7 +531,7 @@ public:
       });
     });
 
-    return std::move(resumption);
+    return resumption;
   }
 
 }; // class OneShot
