@@ -35,7 +35,7 @@ public:
   WithDefault(const T& t) : defaultVal(t) { }
 private:
   const T defaultVal;
-  T CommandClause(Error, std::unique_ptr<Resumption<void, T>>) override
+  T CommandClause(Error, Resumption<void, T>) override
   {
     return defaultVal;
   }

@@ -27,9 +27,61 @@ using OutType = Out;
 
 Reveals the return type of the command.
 
-## classes `ResumptionBase` and `Resumption`
+## class `Resumption`
 
-Resumption represents a captured continuation. A resumption is given to the user either as the argument of `Handler::CmdClause` (a proper resumption) or can be lifted from a function using `OneShot::MakeResumption` (a plain resumption).
+Resumption represents a captured continuation, that is, a suspended computation. A resumption is given to the user either as the argument of `Handler::CmdClause`, or can be lifted from a function using `OneShot::MakeResumption`.
+
+```cpp
+template <typename Out, typename Answer>
+class Resumption
+public:
+  Resumption();
+  
+  Resumption(ResumptionData<Out, Answer>* data) : data(data);
+
+  Resumption(const Resumption<Out, Answer>&) = delete;
+  
+  Resumption& operator=(const Resumption<Out, Answer>&) = delete;
+  
+  Resumption(Resumption<Out, Answer>&& other);
+  
+  Resumption& operator=(Resumption<Out, Answer>&& other); 
+  
+  ResumptionData<Out, Answer>* Release();
+```
+
+Objects of the `Resumption` class are movable but not copyable. This is because they represent suspended **one-shot** continuations.
+
+The `Resumption` class is actually a form of a smart pointer, so moving it around is cheap.
+
+- `typename Out` - In a proper resumption, the output type of the command that suspended the computation. In a plain resumption, the input type of the lifted function.
+
+- `typename Answer` - The return type of the suspended computation (i.e., the return type of `OneShot::Resume` applied to the resumption).
+
+#### :large_orange_diamond: CmdClause<Answer,Cmd>::CommandClause
+
+```cpp
+ResumptionData<Out, Answer>* Release();
+```
+
+Releases the pointer to the suspended computation.
+
+- **return value** `ResumptionData<Out, Answer>*` - The released pointer.
+
+:warning: **Warning:** Never use `delete` on the released pointer! If you want to get rid of it safely, wrap it back in a dummy `Resumption` value, and let it's destructor do the job. For example:
+
+```cpp
+void foo(Resumption<void, int> r)
+{
+  auto ptr = r.Release();
+  // ...
+  Resumption<void, int>{ptr};
+}
+```
+
+## classes `ResumptionData` and `ResumptionBase`
+
+Thre classes that represents "bare" captured continuations that are not memory-managed by the library.
 
 ```cpp
 class ResumptionBase {
@@ -38,7 +90,7 @@ public:
 };
 
 template <typename Out, typename Answer>
-class Resumption : public ResumptionBase
+class ResumptionData : public ResumptionBase
 {
   Resumption() = delete;
 };
@@ -56,7 +108,7 @@ The class for a command clause for a single command in a handler. A handler can 
 template <typename Answer, typename Cmd>
 class CmdClause {
 protected:
-  virtual Answer CommandClause(Cmd, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>) = 0;
+  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
 };
 ```
 
@@ -68,14 +120,14 @@ protected:
 #### :large_orange_diamond: CmdClause<Answer,Cmd>::CommandClause
 
 ```cpp
-virtual Answer CommandClause(Cmd c, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>> r);
+virtual Answer CommandClause(Cmd c, Resumption<typename Cmd::OutType, Answer> r);
 ```
 
 A handler handles a particular command `Cmd` if it inherits from `CmdClause<..., Cmd>` and overrides `CommandClause` with the "interpretation" of the command.
 
 - `Cmd c` - The handled command. The object `c` contains "arguments" of the command. When a handler inherits from a number of `CmdClause`'s, the right clause is chosen via the overloading resolution mechanism out of the overloads of `CommandClauses` in the handler based on the type `Cmd`.
 
-- `std::unique_ptr<Resumption<typename Cmd::OutType, Answer>> r` - The captured resumption. When the user invokes a command, the control goes back to the handler and the computation delimited by the handler is captured as the resumption `r`. Since resumptions are one-shot, when we resume `r` using `OneShot::Resume`, we have to transfer the ownership of the pointer `r` back to the class `OneShot`, which makes resuming `r` twice illegal.
+- `Resumption<typename Cmd::OutType, Answer> r` - The captured resumption. When the user invokes a command, the control goes back to the handler and the computation delimited by the handler is captured as the resumption `r`. Since resumptions are one-shot, when we resume `r` using `OneShot::Resume`, we have to transfer the ownership of `r` back to the class `OneShot`, which makes resuming `r` twice illegal.
 
 - **return value** `Answer` - The overall result of handling the computation.
 
@@ -257,16 +309,16 @@ public:
   static typename Cmd::OutType InvokeCmd(int64_t label, const Cmd& cmd);
   
   template <typename Out, typename Answer>
-  static std::unique_ptr<Resumption<Out, Answer>> MakeResumption(std::function<Answer(Out)> func);
+  static Resumption<Out, Answer> MakeResumption(std::function<Answer(Out)> func);
 
   template <typename Answer>
-  static std::unique_ptr<Resumption<void, Answer>> MakeResumption(std::function<Answer()> func);
+  static Resumption<void, Answer> MakeResumption(std::function<Answer()> func);
   
   template <typename Out, typename Answer>
-  static Answer Resume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult);
+  static Answer Resume(Resumption<Out, Answer> r, Out cmdResult);
 
   template <typename Answer>
-  static Answer Resume(std::unique_ptr<Resumption<void, Answer>> r);
+  static Answer Resume(Resumption<void, Answer> r);
   
   template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd);
@@ -275,10 +327,10 @@ public:
   static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd);
 
   template <typename Out, typename Answer>
-  static Answer TailResume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult);
+  static Answer TailResume(Resumption<Out, Answer> r, Out cmdResult);
 
   template <typename Answer>
-  static Answer TailResume(std::unique_ptr<Resumption<void, Answer>> r);
+  static Answer TailResume(Resumption<void, Answer> r);
 };
 ```
 
@@ -364,11 +416,11 @@ Used in a handled computation to invoke a particular command. The current comput
 
 ```cpp
 template <typename Out, typename Answer>
-static std::unique_ptr<Resumption<Out, Answer>> MakeResumption(std::function<Answer(Out)> func);
+static Resumption<Out, Answer> MakeResumption(std::function<Answer(Out)> func);
 
 // overload for Out == void
 template <typename Answer>
-static std::unique_ptr<Resumption<void, Answer>> MakeResumption(std::function<Answer()> func);
+static Resumption<void, Answer> MakeResumption(std::function<Answer()> func);
 ```
 
 Lift a function to a resumption.
@@ -381,17 +433,17 @@ Lift a function to a resumption.
 
 - `std::function<Answer()> func` - The lifted function (an overload for `Out == void`).
 
-- **Return value** `std::unique_ptr<Resumption<Out, Answer>>` - the resulting resumption.
+- **Return value** `Resumption<Out, Answer>` - the resulting resumption.
 
 #### :large_orange_diamond: OneShot::Resume
 
 ```cpp
 template <typename Out, typename Answer>
-static Answer Resume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult);
+static Answer Resume(Resumption<Out, Answer> r, Out cmdResult);
 
 // overload for Out == void
 template <typename Answer>
-static Answer Resume(std::unique_ptr<Resumption<void, Answer>> r);
+static Answer Resume(Resumption<void, Answer> r);
 ```
 
 Resume a resumption.
@@ -400,7 +452,7 @@ Resume a resumption.
 
 - `typename Answer` - The answer type of the resulting resumption.
 
-- `std::unique_ptr<Resumption<Out, Answer>> r` - The resumed resumption.
+- `Resumption<Out, Answer> r` - The resumed resumption.
 
 - `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
 
@@ -435,11 +487,11 @@ The point of `StaticInvokeCmd` is that we often know upfront which handler will 
 
 ```cpp
 template <typename Out, typename Answer>
-static Answer TailResume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult);
+static Answer TailResume(Resumption<Out, Answer> r, Out cmdResult);
 
 // overload for Out == void
 template <typename Answer>
-static Answer TailResume(std::unique_ptr<Resumption<void, Answer>> r);
+static Answer TailResume(Resumption<void, Answer> r);
 ```
 
 Tail-resume a resumption. This is to be used **only inside a command clause** as the returned expression. Semantically, `return OneShot::Resume(...);` is equivalent to `return OneShot::TailResume(...);`, but it does not build up the call stack.
@@ -449,7 +501,7 @@ Tail-resume a resumption. This is to be used **only inside a command clause** as
 
 - `typename Answer` - The answer type of the resulting resumption.
 
-- `std::unique_ptr<Resumption<Out, Answer>> r` - The resumed resumption.
+- `Resumption<Out, Answer> r` - The resumed resumption.
 
 - `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
 
@@ -459,7 +511,7 @@ Tail-resume a resumption. This is to be used **only inside a command clause** as
 Tail-resumes are useful in command clauses such as:
 
 ```cpp
-int CommandClause(SomeCommand, std::unique_ptr<Resumption<void, int>> r) override
+int CommandClause(SomeCommand, Resumption<void, int> r) override
 {
   // do sth
   return OneShot::Resume(std::move(r));
@@ -478,7 +530,7 @@ In this example, we will build up the call stack until the entire handler return
 ```cpp
 class H : Handler<Answer, void, Op> {
   // ...
-  Answer CommandClause(Op, std::unique_ptr<Resumption<void, Answer>> r) override
+  Answer CommandClause(Op, Resumption<void, Answer> r) override
   {
     return OneShot::TailResume(std::move(r));
   }

@@ -122,7 +122,7 @@ struct Foo : Command<int> { int x; };
 
 class Han : public Handler<void, void, Foo> {
   void ReturnClause () override { }
-  void CommandClause(Foo c, std::unique_ptr<Resumption<int, void>> r) override
+  void CommandClause(Foo c, Resumption<int, void> r) override
   {
     OneShot::TailResume(std::move(r), (a * c.x + b) % 101);
   }

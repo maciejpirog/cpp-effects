@@ -39,14 +39,14 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, Result<T>>* resumption;
+  Resumption<void, Result<T>> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<Result<T>, void, Yield<T>> {
-  Result<T> CommandClause(Yield<T> y, std::unique_ptr<Resumption<void, Result<T>>> r) final override
+  Result<T> CommandClause(Yield<T> y, Resumption<void, Result<T>> r) final override
   {
-    return GenState<T>{y.value, r.release()};
+    return GenState<T>{y.value, std::move(r)};
   }
   Result<T> ReturnClause() final override
   {
@@ -91,10 +91,6 @@ public:
     }
     return *this;
   }
-  ~Generator()
-  {
-    if (result) { delete result.value().resumption; }
-  }
   T Value() const
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
@@ -104,7 +100,7 @@ public:
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
     result = OneShot::Resume(
-      std::unique_ptr<Resumption<void, Result<T>>>(result.value().resumption));
+      std::move(result.value().resumption));
     return result.has_value();
   }
   operator bool() const
@@ -146,14 +142,14 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, Result<T>>* resumption;
+  ResumptionData<void, Result<T>>* resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<Result<T>, void, Yield<T>> {
-  Result<T> CommandClause(Yield<T> y, std::unique_ptr<Resumption<void, Result<T>>> r) final override
+  Result<T> CommandClause(Yield<T> y, Resumption<void, Result<T>> r) final override
   {
-    return GenState<T>{y.value, r.release()};
+    return GenState<T>{y.value, r.Release()};
   }
   Result<T> ReturnClause() final override
   {
@@ -198,10 +194,6 @@ public:
     }
     return *this;
   }
-  ~Generator()
-  {
-    if (result) { delete result.value().resumption; }
-  }
   T Value() const
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
@@ -210,8 +202,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    result = OneShot::Resume(
-      std::unique_ptr<Resumption<void, Result<T>>>(result.value().resumption));
+    result = OneShot::Resume(Resumption<void, Result<T>>(result.value().resumption));
     return result.has_value();
   }
   operator bool() const
@@ -256,14 +247,14 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, void>* resumption;
+  ResumptionData<void, void>* resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<void, void, Yield<T>> {
-  void CommandClause(Yield<T> y, std::unique_ptr<Resumption<void, void>> r) final override
+  void CommandClause(Yield<T> y, Resumption<void, void> r) final override
   {
-    gen->result = GenState<T>{y.value, r.release()};
+    gen->result = GenState<T>{y.value, r.Release()};
   }
   void ReturnClause() final override
   {
@@ -310,10 +301,6 @@ public:
     }
     return *this;
   }
-  ~Generator()
-  {
-    if (result) { delete result.value().resumption; }
-  }
   T Value() const
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
@@ -322,8 +309,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    OneShot::Resume(
-      std::unique_ptr<Resumption<void, void>>(result.value().resumption));
+    OneShot::Resume(Resumption<void,void>(result.value().resumption));
     return result.has_value();
   }
   operator bool() const
@@ -334,7 +320,6 @@ public:
 };
 
 }
-
 
 namespace OptStaticGenerator {
 
@@ -368,14 +353,14 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, void>* resumption;
+  Resumption<void, void> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<void, void, Yield<T>> {
-  void CommandClause(Yield<T> y, std::unique_ptr<Resumption<void, void>> r) final override
+  void CommandClause(Yield<T> y, Resumption<void, void> r) final override
   {
-    gen->result = GenState<T>{y.value, r.release()};
+    gen->result = GenState<T>{y.value, std::move(r)};
   }
   void ReturnClause() final override
   {
@@ -422,10 +407,6 @@ public:
     }
     return *this;
   }
-  ~Generator()
-  {
-    if (result) { delete result.value().resumption; }
-  }
   T Value() const
   {
     // if (!result) { throw std::out_of_range("Generator::Value"); }
@@ -434,8 +415,7 @@ public:
   bool Next()
   {
     // if (!result) { throw std::out_of_range("Generator::Next"); }
-    OneShot::Resume(
-      std::unique_ptr<Resumption<void, void>>((*result).resumption));
+    OneShot::Resume(std::move(result->resumption));
     return result.has_value();
   }
   operator bool() const

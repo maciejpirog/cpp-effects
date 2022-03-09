@@ -37,7 +37,7 @@ private:
   std::string msg = "alive";
   void PrintStatus() { std::cout << "I'm " << this->msg << "!" << std::endl; }
   void ReturnClause() override { }
-  void CommandClause(Cmd, std::unique_ptr<Resumption<void, void>> r) override
+  void CommandClause(Cmd, Resumption<void, void> r) override
   {
     this->PrintStatus();
     OneShot::Resume(std::move(r));
@@ -59,15 +59,15 @@ void afterReturn()
 // resumption lives on
 // -----------------------------------------------------------
 
-Resumption<void, void>* res = nullptr;
+Resumption<void, void> res;
 
 class EscapeHandler :  public Handler<void, void, Cmd> {
 public:
   ~EscapeHandler() { std::cout << "The handler is dead!" << std::endl; }
 private:
-  void CommandClause(Cmd, std::unique_ptr<Resumption<void, void>> r)
+  void CommandClause(Cmd, Resumption<void, void> r)
   {
-    res = r.release();
+    res = std::move(r);
     std::cout << "Must give us pause!" << std::endl;
   }
   void ReturnClause() { std::cout << "Thanks!" << std::endl; }
@@ -83,9 +83,7 @@ void resumptionEscape()
 
   std::cout << "[A short break]" << std::endl;
 
-  std::unique_ptr rptr = std::unique_ptr<Resumption<void, void>>(res);
-  res = nullptr;
-  OneShot::Resume(std::move(rptr));
+  OneShot::Resume(std::move(res));
 }
 
 // ----

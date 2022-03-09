@@ -100,8 +100,8 @@ private:
 
 void testStateful()
 {
-  OneShot::HandleWith(test, std::make_shared<HStateful<void, int>>(100));
-  std::cout << OneShot::HandleWith(test2, std::make_shared<HStateful<std::string, int>>(100));
+  OneShot::Handle<HStateful<void, int>>(test, 100);
+  std::cout << OneShot::Handle<HStateful<std::string, int>>(test2, 100);
   std::cout << std::endl;
 
   // Output:
@@ -119,7 +119,7 @@ public:
   Bracket(const std::string& msg) : msg(msg) { }
 private:
   std::string msg;
-  void CommandClause(Do, std::unique_ptr<Resumption<void, void>> r) override
+  void CommandClause(Do, Resumption<void, void> r) override
   {
     std::string lmsg = this->msg;
     std::cout << lmsg << "+" << std::flush;

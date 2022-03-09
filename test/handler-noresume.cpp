@@ -19,7 +19,7 @@ public:
   Printer(const std::string& msg) : msg(msg) { }
 private:
   std::string msg;
-  int CommandClause(Print, std::unique_ptr<Resumption<void, int>> r) override
+  int CommandClause(Print, Resumption<void, int> r) override
   {
     std::cout << msg << std::flush;
     return OneShot::Resume(std::move(r));

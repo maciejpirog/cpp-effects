@@ -47,7 +47,7 @@ struct Error : Command<void> { };
 
 class Catch : public Handler<void, void, Error> {
   void ReturnClause () final override { }
-  void CommandClause(Error, std::unique_ptr<Resumption<void, void>>) final override { esum++; }
+  void CommandClause(Error, Resumption<void, void>) final override { esum++; }
 };
 
 void testHandlers(int max, int mod_)

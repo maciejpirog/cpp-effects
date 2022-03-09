@@ -36,14 +36,14 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, Result<T>>* resumption;
+  ResumptionData<void, Result<T>>* resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<Result<T>, void, Yield<T>> {
-  Result<T> CommandClause(Yield<T> y, std::unique_ptr<Resumption<void, Result<T>>> r) override
+  Result<T> CommandClause(Yield<T> y, Resumption<void, Result<T>> r) override
   {
-    return GenState<T>{y.value, r.release()};
+    return GenState<T>{y.value, r.Release()};
   }
   Result<T> ReturnClause() override
   {
@@ -90,7 +90,7 @@ public:
   }
   ~Generator()
   {
-    if (result) { delete result.value().resumption; }
+    if (result) { Resumption<void, Result<T>>{result->resumption}; }
   }
   T Value() const
   {
@@ -101,7 +101,7 @@ public:
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
     result = OneShot::Resume(
-      std::unique_ptr<Resumption<void, Result<T>>>(result.value().resumption));
+      Resumption<void, Result<T>>(result.value().resumption));
     return result.has_value();
   }
   operator bool() const

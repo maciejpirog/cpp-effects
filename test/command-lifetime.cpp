@@ -33,7 +33,7 @@ public:
 
 class MyHandler : public Handler<void, void, Cmd> {
   void ReturnClause() override { }
-  void CommandClause(Cmd c, std::unique_ptr<Resumption<void, void>> r) override
+  void CommandClause(Cmd c, Resumption<void, void> r) override
   {
     std::cout << "In handler: received command id = " << c.id << std::endl;
     OneShot::Resume(std::move(r));

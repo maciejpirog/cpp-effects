@@ -83,15 +83,55 @@ protected:
 };
 
 template <typename Out, typename Answer>
-class Resumption final : public ResumptionBase {
+class ResumptionData final : public ResumptionBase {
   friend class OneShot;
   template <typename, typename> friend class CmdClause;
+  template <typename, typename> friend class Resumption;
 protected:
-  Resumption() { }
+  ResumptionData() { }
   std::list<MetaframePtr> storedMetastack;
   std::optional<Tangible<Out>> cmdResultTransfer; // Used to transfer data between fibers
   Answer Resume();
   virtual void TailResume() override;
+};
+
+template <typename Out, typename Answer>
+class Resumption
+{
+  friend class OneShot;
+public:
+  Resumption() { }
+  Resumption(ResumptionData<Out, Answer>* data) : data(data) { }
+  ~Resumption()
+  {
+    if (data) {
+      data->cmdResultTransfer = {};
+      data->storedMetastack.clear();
+    }
+  }
+  Resumption(const Resumption<Out, Answer>&) = delete;
+  Resumption(Resumption<Out, Answer>&& other)
+  {
+    data = other.data;
+    other.data = nullptr;
+  }
+  Resumption& operator=(const Resumption<Out, Answer>&) = delete;
+  Resumption& operator=(Resumption<Out, Answer>&& other)
+  {
+    if (this != &other) {
+      data = other.data;
+      other.data = nullptr;
+    }
+    return *this;
+  }
+  ResumptionData<Out, Answer>* Release()
+  {
+    auto d = data;
+    data = nullptr;
+    return d;
+  }
+private:
+  ResumptionData<Out, Answer>* data = nullptr;
 };
 
 // ----------
@@ -107,7 +147,7 @@ class Metaframe {
   friend class OneShot;
   template <typename, typename> friend class CmdClause;
   friend class InitMetastack;
-  template <typename, typename> friend class Resumption;
+  template <typename, typename> friend class ResumptionData;
 public:
   virtual ~Metaframe() { }
   virtual void DebugPrint() const
@@ -151,10 +191,11 @@ template <typename Answer, typename Cmd>
 class CmdClause : public CanInvokeCmdClause<Cmd> {
   friend class OneShot;
 protected:
-  virtual Answer CommandClause(Cmd, std::unique_ptr<Resumption<typename Cmd::OutType, Answer>>) = 0;
+  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
 private:
   virtual typename Cmd::OutType InvokeCmd(
     std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) final override;
+  ResumptionData<typename Cmd::OutType, Answer> resumptionBuffer;
 };
 
 // --------
@@ -223,7 +264,8 @@ struct TailAnswer {
 
 class OneShot {
   template <typename, typename, typename...> friend class Handler;
-  template <typename, typename> friend class Resumption;
+  template <typename, typename> friend class ResumptionData;
+  template <typename, typename> friend class ResuptionPtr;
   friend class InitMetastack;
 
 public:
@@ -376,7 +418,6 @@ public:
         return canInvoke->InvokeCmd(++it, cmd);
       }
     }
-    std::cerr << "error: no handler for command " << typeid(Cmd).name() << std::endl;
     DebugPrintMetastack();
     exit(-1);
   }
@@ -403,52 +444,52 @@ public:
   }
 
   template <typename Out, typename Answer>
-  static Answer Resume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult)
+  static Answer Resume(Resumption<Out, Answer> r, Out cmdResult)
   {
-    r->cmdResultTransfer->value = std::move(cmdResult);
-    return r.release()->Resume();
+    r.data->cmdResultTransfer->value = std::move(cmdResult);
+    return r.Release()->Resume();
   }
 
   template <typename Answer>
-  static Answer Resume(std::unique_ptr<Resumption<void, Answer>> r)
+  static Answer Resume(Resumption<void, Answer> r)
   {
-    return r.release()->Resume();
+    return r.Release()->Resume();
   }
 
   template <typename Out, typename Answer>
-  static Answer TailResume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult)
+  static Answer TailResume(Resumption<Out, Answer> r, Out cmdResult)
   {
-    r->cmdResultTransfer->value = std::move(cmdResult);
+    r.data->cmdResultTransfer->value = std::move(cmdResult);
     // Trampoline back to Handle
-    tailAnswer() = TailAnswer{r.release()};
+    tailAnswer() = TailAnswer{r.Release()};
     if constexpr (!std::is_void<Answer>::value) {
       return Answer();
     }
   }
 
   template <typename Answer>
-  static Answer TailResume(std::unique_ptr<Resumption<void, Answer>> r)
+  static Answer TailResume(Resumption<void, Answer> r)
   {
     // Trampoline back to Handle
-    tailAnswer() = TailAnswer{r.release()};
+    tailAnswer() = TailAnswer{r.Release()};
     if constexpr (!std::is_void<Answer>::value) {
       return Answer();
     }
   }
 
   template <typename Out, typename Answer>
-  static std::unique_ptr<Resumption<Out, Answer>> MakeResumption(std::function<Answer(Out)> func)
+  static Resumption<Out, Answer> MakeResumption(std::function<Answer(Out)> func)
   {
-    std::unique_ptr<Resumption<Out, Answer>> resumption;
+    Resumption<Out, Answer> resumption;
 
     struct Abort : Command<void> { };
     class HAbort : public FlatHandler<void, Abort> {
-      void CommandClause(Abort, std::unique_ptr<Resumption<void, void>>) override { }
+      void CommandClause(Abort, Resumption<void, void>) override { }
     };
 
-    struct Arg : Command<Out> { std::unique_ptr<Resumption<Out, Answer>>& res; };
+    struct Arg : Command<Out> { Resumption<Out, Answer>& res; };
     class HArg : public FlatHandler<Answer, Arg> {
-      Answer CommandClause(Arg a, std::unique_ptr<Resumption<Out, Answer>> r) override
+      Answer CommandClause(Arg a, Resumption<Out, Answer> r) override
       {
         a.res = std::move(r);
         InvokeCmd(Abort{});
@@ -461,22 +502,22 @@ public:
       });
     });
 
-    return resumption;
+    return std::move(resumption);
   }
 
   template <typename Answer>
-  static std::unique_ptr<Resumption<void, Answer>> MakeResumption(std::function<Answer()> func)
+  static Resumption<void, Answer> MakeResumption(std::function<Answer()> func)
   {
-    std::unique_ptr<Resumption<void, Answer>> resumption;
+    Resumption<void, Answer> resumption;
 
     struct Abort : Command<void> { };
     class HAbort : public FlatHandler<void, Abort> {
-      void CommandClause(Abort, std::unique_ptr<Resumption<void, void>>) override { }
+      void CommandClause(Abort, Resumption<void, void>) override { }
     };
 
-    struct Arg : Command<void> { std::unique_ptr<Resumption<void, Answer>>& res; };
+    struct Arg : Command<void> { Resumption<void, Answer>& res; };
     class HArg : public FlatHandler<Answer, Arg> {
-      Answer CommandClause(Arg a, std::unique_ptr<Resumption<void, Answer>> r) override
+      Answer CommandClause(Arg a, Resumption<void, Answer> r) override
       {
         a.res = std::move(r);
         InvokeCmd(Abort{});
@@ -490,7 +531,7 @@ public:
       });
     });
 
-    return resumption;
+    return std::move(resumption);
   }
 
 }; // class OneShot
@@ -503,82 +544,39 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
 
   // (continued from OneShot::InvokeCmd) ...looking for [d]
   auto jt = it.base();
-  auto resumption = new Resumption<Out, Answer>();  // See (NOTE) below
+  auto resumption = &(this->resumptionBuffer);
   resumption->storedMetastack.splice(
     resumption->storedMetastack.begin(), OneShot::Metastack, jt, OneShot::Metastack.end());
   // at this point: [a][b][c]; stored stack = [d][e][f][g.] 
 
   std::move(OneShot::Metastack.back()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
     // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
-    resumption->storedMetastack.back()->fiber = std::move(prev);      // (A)
+    resumption->storedMetastack.back()->fiber = std::move(prev);
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
     if constexpr (!std::is_void<Answer>::value) {
       *(static_cast<std::optional<Answer>*>(OneShot::Metastack.back()->returnBuffer)) =
-        this->CommandClause(cmd,                                      // (B)
-          std::unique_ptr<Resumption<Out, Answer>>(resumption));
+        this->CommandClause(cmd, Resumption(resumption));
     } else {
-      this->CommandClause(cmd,
-        std::unique_ptr<Resumption<Out, Answer>>(resumption));
+      this->CommandClause(cmd, Resumption(resumption));
     }
     return ctx::fiber();
   });
 
-  // If the control reaches here, this means that the resumption is   // (C)
+  // If the control reaches here, this means that the resumption is
   // being resumed at the moment, and so we no longer need the
-  // resumption object, because the fiber is no longer valid.
+  // resumption object.
   if constexpr (!std::is_void<Out>::value) {
     Out cmdResult = std::move(resumption->cmdResultTransfer->value);
-    delete resumption;                                                // (D)
+    resumption->storedMetastack.clear();
+    resumption->cmdResultTransfer = {};
     return cmdResult;
   } else {
-    delete resumption;
+    resumption->storedMetastack.clear();
   }
 }
 
-/* [NOTE] ... on memory management of resumptions
-
-The fact that call stacks are now first class introduces an
-interesting subtlety: one of the rare occasions when the code
-
-void foo() 
-{
-  auto p = new C();
-  ...
-  delete p;
-}
-
-is correct, while a local value or a local unique pointer is not!
-
-This is because we create a resumption, but the resumption contains a
-(unique!) pointer to the fiber in which InvokeCmd's frame lives
-[A]. Then, the resumption is given to the outside world as a unique
-pointer [B]. Technically, it is not a unique pointer, because the
-pointer "resumption" still lives in the suspended fiber, but it makes
-the intent clear: the user has to either delete the resumption or
-resume it once.
-
-If the user deletes the resumption, its destructor deletes the fiber,
-and so the "resumption" pointer simply disappears. Everything is fine:
-both the resumption and the fiber are gone, and since the user had
-unique ownership of the resumption, and the resumption had unique
-ownership of the fiber, everything is tidy. But imagine what would
-happen if the resumption was a local variable in InvokeCmd: In such a
-case, the destructor of the resumption deletes the fiber, which means
-that the stack is unwound, which means that "resumption"'s target
-(i.e. the resumption) is deleted, which... is already happening at the
-moment! Everything ends in a disaster.
-
-In the other case, when the user resumes the resumption, the control
-goes back to InvokeCmd [C]. The user gives up the ownership of the
-resumption, which means that "resumption" is now a truly unique
-pointer, and we can safely delete it [D], as it won't be needed any
-more. Because the resumption has unique ownership of the suspended
-fiber, there is no other way to resume the fiber than by resuming this
-particular resumption, which means that it is safe to delete it now.
-*/
-
 template <typename Out, typename Answer>
-Answer Resumption<Out, Answer>::Resume()
+Answer ResumptionData<Out, Answer>::Resume()
 {
   if constexpr (!std::is_void<Answer>::value) {
     std::optional<Answer> answer;
@@ -605,7 +603,7 @@ Answer Resumption<Out, Answer>::Resume()
 }
 
 template <typename Out, typename Answer>
-void Resumption<Out, Answer>::TailResume()
+void ResumptionData<Out, Answer>::TailResume()
 {
   std::move(this->storedMetastack.back()->fiber).resume_with(
       [&](ctx::fiber&& prev) -> ctx::fiber {

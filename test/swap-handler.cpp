@@ -16,7 +16,7 @@ class Bottom { Bottom() = delete; };
 template <typename H>
 struct CmdAid : Command<Bottom> {
   std::shared_ptr<H> han;
-  Resumption<void, typename H::BodyType>* res;
+  ResumptionData<void, typename H::BodyType>* res;
 };
 
 template <typename H>
@@ -26,10 +26,10 @@ struct CmdAbet : Command<void> {
 
 template <typename H>
 class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAid<H>> {
-  typename H::AnswerType CommandClause(CmdAid<H> c, std::unique_ptr<Resumption<Bottom, typename H::AnswerType>>) override {
+  typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<Bottom, typename H::AnswerType>) override {
     return OneShot::Handle<Aid<H>>([=](){
       return OneShot::HandleWith([=](){
-          return OneShot::Resume(std::unique_ptr<Resumption<void, typename H::BodyType>>(c.res)); },
+          return OneShot::Resume(Resumption<void, typename H::BodyType>(c.res)); },
         c.han);
     });
   }
@@ -42,9 +42,9 @@ class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAi
 template <typename H>
 class Abet : public Handler<typename H::BodyType, typename H::BodyType, CmdAbet<H>> {
   [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c,
-    std::unique_ptr<Resumption<void, typename H::BodyType>> r) override
+    Resumption<void, typename H::BodyType> r) override
   {
-    OneShot::InvokeCmd(CmdAid<H>{{}, c.han, r.release()});
+    OneShot::InvokeCmd(CmdAid<H>{{}, c.han, r.Release()});
     exit(-1); // This will never be reached
   }
   typename H::BodyType ReturnClause(typename H::BodyType b) override
@@ -76,7 +76,7 @@ public:
   Reader(R val) : val(val) { }
 private:
   const R val;
-  Answer CommandClause(Read<R>, std::unique_ptr<Resumption<R, Answer>> r) override
+  Answer CommandClause(Read<R>, Resumption<R, Answer> r) override
   {
     return OneShot::Resume(std::move(r), val);
   }

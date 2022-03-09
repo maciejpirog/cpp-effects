@@ -121,17 +121,17 @@ void testStateful()
 template <typename Answer, typename S>
 class HLambda : public Handler<std::function<Answer(S)>, Answer, Put<S>, Get<S>> {
   std::function<Answer(S)> CommandClause(Put<S> p,
-    std::unique_ptr<Resumption<void, std::function<Answer(S)>>> r) override
+    Resumption<void, std::function<Answer(S)>> r) override
   {
-    return [p, r = r.release()](S) -> Answer {
-      return OneShot::Resume(std::unique_ptr<Resumption<void, std::function<Answer(S)>>>(r))(p.newState);
+    return [p, r = r.Release()](S) -> Answer {
+      return OneShot::Resume(Resumption<void, std::function<Answer(S)>>(r))(p.newState);
     };
   }
   std::function<Answer(S)> CommandClause(Get<S>,
-    std::unique_ptr<Resumption<S, std::function<Answer(S)>>> r) override
+    Resumption<S, std::function<Answer(S)>> r) override
   {
-    return [r = r.release()](S s) -> Answer {
-      return OneShot::Resume(std::unique_ptr<Resumption<S, std::function<Answer(S)>>>(r), s)(s);
+    return [r = r.Release()](S s) -> Answer {
+      return OneShot::Resume(Resumption<S, std::function<Answer(S)>>(r), s)(s);
     };
   }
   std::function<Answer(S)> ReturnClause(Answer a) override
@@ -143,17 +143,17 @@ class HLambda : public Handler<std::function<Answer(S)>, Answer, Put<S>, Get<S>>
 template <typename S>
 class HLambda<void, S> : public Handler<std::function<void(S)>, void, Put<S>, Get<S>> {
   std::function<void(S)> CommandClause(Put<S> p,
-    std::unique_ptr<Resumption<void, std::function<void(S)>>> r) override
+    Resumption<void, std::function<void(S)>> r) override
   {
-    return [r = r.release(), p](S) -> void {
-      OneShot::Resume(std::unique_ptr<Resumption<void, std::function<void(S)>>>(r))(p.newState);
+    return [r = r.Release(), p](S) -> void {
+      OneShot::Resume(Resumption<void, std::function<void(S)>>(r))(p.newState);
     };
   }
   std::function<void(S)> CommandClause(Get<S>,
-    std::unique_ptr<Resumption<S, std::function<void(S)>>> r) override
+    Resumption<S, std::function<void(S)>> r) override
   {
-    return [r = r.release()](S s) -> void {
-      OneShot::Resume(std::unique_ptr<Resumption<S, std::function<void(S)>>>(r), s)(s);
+    return [r = r.Release()](S s) -> void {
+      OneShot::Resume(Resumption<S, std::function<void(S)>>(r), s)(s);
     };
   }
   std::function<void(S)> ReturnClause() override
@@ -183,7 +183,7 @@ class Bottom { Bottom() = delete; };
 template <typename H>
 struct CmdAid : Command<Bottom> {
   std::shared_ptr<H> han;
-  Resumption<void, typename H::BodyType>* res;
+  ResumptionData<void, typename H::BodyType>* res;
 };
 
 template <typename H>
@@ -193,10 +193,10 @@ struct CmdAbet : Command<void> {
 
 template <typename H>
 class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAid<H>> {
-  typename H::AnswerType CommandClause(CmdAid<H> c, std::unique_ptr<Resumption<Bottom, typename H::AnswerType>>) override {
+  typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<Bottom, typename H::AnswerType>) override {
     return OneShot::Handle<Aid<H>>([=](){
       return OneShot::HandleWith([=](){
-          return OneShot::Resume(std::unique_ptr<Resumption<void, typename H::BodyType>>(c.res)); }, c.han);
+          return OneShot::Resume(Resumption<void, typename H::BodyType>(c.res)); }, c.han);
     });
   }
   typename H::AnswerType ReturnClause(typename H::AnswerType a) override
@@ -207,8 +207,8 @@ class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAi
 
 template <typename H>
 class Abet : public Handler<typename H::BodyType, typename H::BodyType, CmdAbet<H>> {
-  [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c, std::unique_ptr<Resumption<void, typename H::BodyType>> r) override {
-    OneShot::InvokeCmd(CmdAid<H>{{}, c.han, r.release()});
+  [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c, Resumption<void, typename H::BodyType> r) override {
+    OneShot::InvokeCmd(CmdAid<H>{{}, c.han, r.Release()});
     exit(-1); // This will never be reached
   }
   typename H::BodyType ReturnClause(typename H::BodyType b) override
@@ -240,7 +240,7 @@ public:
   Reader(R val) : val(val) { }
 private:
   const R val;  // Note the const modifier!
-  Answer CommandClause(Read<R>, std::unique_ptr<Resumption<int,Answer>> r) override
+  Answer CommandClause(Read<R>, Resumption<int,Answer> r) override
   {
     return OneShot::TailResume(std::move(r), val);
   }
@@ -252,13 +252,13 @@ private:
 
 template<typename Answer, typename S>
 class HSwitching : public Handler<Answer, Answer, Put<S>, Get<S>> {
-  Answer CommandClause(Put<S> p, std::unique_ptr<Resumption<void, Answer>> r) override
+  Answer CommandClause(Put<S> p, Resumption<void, Answer> r) override
   {
     OneShot::InvokeCmd(
       CmdAbet<ReaderType<Answer, S>>{{}, std::make_shared<Reader<Answer, S>>(p.newState)});
     return OneShot::Resume(std::move(r));
   }
-  Answer CommandClause(Get<S>, std::unique_ptr<Resumption<S, Answer>> r) override
+  Answer CommandClause(Get<S>, Resumption<S, Answer> r) override
   {
     return OneShot::Resume(std::move(r), OneShot::InvokeCmd(Read<S>{}));
   }

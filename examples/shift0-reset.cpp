@@ -19,13 +19,13 @@ using namespace CppEffects;
 
 template <typename Answer, typename Hole>
 struct Shift0 : Command<Hole> {
-  std::function<Answer(std::unique_ptr<Resumption<Hole, Answer>>)> e;
+  std::function<Answer(Resumption<Hole, Answer>)> e;
 };
 
 template <typename Answer, typename Hole>
 class Reset : public FlatHandler<Answer, Shift0<Answer, Hole>> {
   Answer CommandClause(
-    Shift0<Answer, Hole> s, std::unique_ptr<Resumption<Hole, Answer>> r) final override
+    Shift0<Answer, Hole> s, Resumption<Hole, Answer> r) final override
   {
     return s.e(std::move(r));
   }
@@ -45,9 +45,9 @@ template <typename Answer, typename Hole>
 Hole shift0(std::function<Answer(std::function<Answer(Hole)>)> e)
 {
   return OneShot::InvokeCmd(Shift0<Answer, Hole>{{},
-    [=](std::unique_ptr<Resumption<Hole, Answer>> k) -> Answer {
-      return e([k = k.release()](Hole out) -> Answer {
-        return OneShot::Resume(std::unique_ptr<Resumption<Hole, Answer>>(k), out);
+    [=](Resumption<Hole, Answer> k) -> Answer {
+      return e([k = k.Release()](Hole out) -> Answer {
+        return OneShot::Resume(Resumption<Hole, Answer>(k), out);
       });
     }
   });

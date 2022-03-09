@@ -80,7 +80,7 @@ private:
 // Internal stuff
 // --------------
 
-using Res = std::unique_ptr<Resumption<void, void>>;
+using Res = Resumption<void, void>;
 
 struct ActorInfo {
   ActorBase* actorData;

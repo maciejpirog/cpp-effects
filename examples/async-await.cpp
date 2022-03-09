@@ -19,7 +19,7 @@ using namespace CppEffects;
 // Async-await with a scheduler
 // ----------------------------
 
-using Res = std::unique_ptr<Resumption<void, void>>;
+using Res = Resumption<void, void>;
 
 template <typename T>
 class Scheduler;

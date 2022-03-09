@@ -49,11 +49,11 @@ class RollbackState : public Handler<bool, void, Rollback, AssignCmd> {
   {
     return true;
   }
-  bool CommandClause(Rollback, std::unique_ptr<Resumption<void, bool>>) override
+  bool CommandClause(Rollback, Resumption<void, bool>) override
   {
     return false;
   }
-  bool CommandClause(AssignCmd a, std::unique_ptr<Resumption<void, bool>> r) override
+  bool CommandClause(AssignCmd a, Resumption<void, bool> r) override
   {
     bool result = OneShot::Resume(std::move(r));
     if (!result) { a.asg->undo(); }

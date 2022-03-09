@@ -26,31 +26,31 @@ struct PingInner : Command<void> { };
 struct CutMiddlemanAid : Command<void> { };
 
 struct CutMiddlemanAbet : Command<void> {
-  Resumption<void, void>* res;
+  ResumptionData<void, void>* res;
 };
 
 class HInner : public Handler<void, void, PingInner, CutMiddlemanAid> {
-  void CommandClause(PingInner, std::unique_ptr<Resumption<void, void>> r) override
+  void CommandClause(PingInner, Resumption<void, void> r) override
   {
     std::cout << "Inner!" << std::endl;
     OneShot::TailResume(std::move(r));
   }
-  void CommandClause(CutMiddlemanAid, std::unique_ptr<Resumption<void, void>> r) override
+  void CommandClause(CutMiddlemanAid, Resumption<void, void> r) override
   {
-    OneShot::InvokeCmd(CutMiddlemanAbet{{}, r.release()});
+    OneShot::InvokeCmd(CutMiddlemanAbet{{}, r.Release()});
   }
   void ReturnClause() override { }
 };
 
 class HOuter : public Handler<void, void, PingOuter, CutMiddlemanAbet> {
-  void CommandClause(PingOuter, std::unique_ptr<Resumption<void, void>> r) override
+  void CommandClause(PingOuter, Resumption<void, void> r) override
   {
     std::cout << "Outer!" << std::endl;
     OneShot::TailResume(std::move(r));
   }
-  void CommandClause(CutMiddlemanAbet a, std::unique_ptr<Resumption<void, void>>) override
+  void CommandClause(CutMiddlemanAbet a, Resumption<void, void>) override
   {
-    OneShot::TailResume(std::unique_ptr<Resumption<void, void>>(a.res));
+    OneShot::TailResume(Resumption<void, void>(a.res));
   }
 
   void ReturnClause() override { }
@@ -91,7 +91,7 @@ void test1()
 // 2.
 // --
 
-Resumption<void, int>* Res = nullptr;
+ResumptionData<void, int>* Res = nullptr;
 
 struct Inc : Command<void> { };
 
@@ -107,16 +107,16 @@ void break_()
 }
 int resume()
 {
-  return OneShot::Resume(std::unique_ptr<Resumption<void, int>>(Res));
+  return OneShot::Resume(Resumption<void, int>(Res));
 }
 
 class HIP : public Handler<int, int, Inc, Break> {
-  int CommandClause(Break, std::unique_ptr<Resumption<void, int>> r) override
+  int CommandClause(Break, Resumption<void, int> r) override
   {
-    Res = r.release();
+    Res = r.Release();
     return 0;
   }
-  int CommandClause(Inc, std::unique_ptr<Resumption<void, int>> r) override
+  int CommandClause(Inc, Resumption<void, int> r) override
   {
     return OneShot::Resume(std::move(r)) + 1;
   }

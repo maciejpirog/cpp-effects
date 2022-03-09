@@ -32,8 +32,7 @@ public:
   BoundedExecution(int64_t fuel) : fuel(fuel) { }
 private:
   int64_t fuel;
-  std::optional<T> CommandClause(Consume c,
-    std::unique_ptr<Resumption<void, std::optional<T>>> r) override
+  std::optional<T> CommandClause(Consume c, Resumption<void, std::optional<T>> r) override
   {
     if (fuel < c.amount) { return {}; } // Not enough fuel left to continue
     fuel -= c.amount;
@@ -52,7 +51,7 @@ class MeasureFuel : public Handler<std::tuple<T, int64_t>, T, Consume> {
 private:
   int64_t fuel = 0;
   std::tuple<T, int64_t> CommandClause(Consume c,
-    std::unique_ptr<Resumption<void, std::tuple<T, int64_t>>> r) override
+    Resumption<void, std::tuple<T, int64_t>> r) override
   {
     fuel += c.amount;
     return OneShot::TailResume(std::move(r));

@@ -55,8 +55,7 @@ void fork(std::function<void()> proc)
 We define the scheduler, which is a **handler** that can interpret the two commands by pushing the resumptions (i.e., captured continuations) to the queue.
 
 ```cpp
-// Res is the type of suspended threads
-using Res = std::unique_ptr<Resumption<void, void>>;
+using Res = Resumption<void, void>;
 
 class Scheduler : public Handler<void, void, Yield, Fork> {
 public:
@@ -71,7 +70,7 @@ public:
   }
 private:
   static std::list<Res> queue;
-  static void Run(std::function<void()>)
+  static void Run(std::function<void()> f)
   {
     OneShot::Handle<Scheduler>(f);
   }

@@ -14,7 +14,7 @@ using namespace CppEffects;
 struct Break : Command<void> { };
 
 class HH : public Handler<int, void, Break> {
-  int CommandClause(Break, std::unique_ptr<Resumption<void, int>>) override {
+  int CommandClause(Break, Resumption<void, int>) override {
     return 100;
   }
   int ReturnClause() override {

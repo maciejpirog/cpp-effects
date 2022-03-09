@@ -39,7 +39,7 @@ void fork(std::function<void()> proc)
 // Scheduler for threads
 // ---------------------
 
-using Res = std::unique_ptr<Resumption<void, void>>;
+using Res = Resumption<void, void>;
 
 class Scheduler : public Handler<void, void, Yield, Fork> {
 public:

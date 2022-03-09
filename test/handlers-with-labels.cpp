@@ -23,7 +23,7 @@ public:
   Reader(R val) : val(val) { }
 private:
   const R val;
-  void CommandClause(Read<R>, std::unique_ptr<Resumption<R, void>> r) override
+  void CommandClause(Read<R>, Resumption<R, void> r) override
   {
     OneShot::TailResume(std::move(r), val);
   }
@@ -33,7 +33,7 @@ private:
 void rec(int64_t n)
 {
   if (n > 0) {
-    OneShot::HandleWith(n, std::bind(rec, n - 1), std::make_shared<Reader<int64_t>>(n));
+    OneShot::Handle<Reader<int64_t>>(n, std::bind(rec, n - 1), n);
   } else {
     for (int64_t i = 0; i < 300000; i += 767) {
       std::cout << OneShot::InvokeCmd(i % 999 + 1, Read<int64_t>{}) << " ";
