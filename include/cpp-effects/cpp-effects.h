@@ -112,8 +112,10 @@ public:
   Resumption(const Resumption<Out, Answer>&) = delete;
   Resumption(Resumption<Out, Answer>&& other)
   {
-    data = other.data;
-    other.data = nullptr;
+    if (this != &other) {
+      data = other.data;
+      other.data = nullptr;
+    }
   }
   Resumption& operator=(const Resumption<Out, Answer>&) = delete;
   Resumption& operator=(Resumption<Out, Answer>&& other)
