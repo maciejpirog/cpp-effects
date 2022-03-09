@@ -102,6 +102,7 @@ class Resumption
 public:
   Resumption() { }
   Resumption(ResumptionData<Out, Answer>* data) : data(data) { }
+  Resumption(ResumptionData<Out, Answer>& data) : data(&data) { }
   ~Resumption()
   {
     if (data) {
@@ -546,20 +547,20 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
 
   // (continued from OneShot::InvokeCmd) ...looking for [d]
   auto jt = it.base();
-  auto resumption = &(this->resumptionBuffer);
-  resumption->storedMetastack.splice(
-    resumption->storedMetastack.begin(), OneShot::Metastack, jt, OneShot::Metastack.end());
+  ResumptionData<Out, Answer>& resumption = this->resumptionBuffer;
+  resumption.storedMetastack.splice(
+    resumption.storedMetastack.begin(), OneShot::Metastack, jt, OneShot::Metastack.end());
   // at this point: [a][b][c]; stored stack = [d][e][f][g.] 
 
   std::move(OneShot::Metastack.back()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
     // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
-    resumption->storedMetastack.back()->fiber = std::move(prev);
+    resumption.storedMetastack.back()->fiber = std::move(prev);
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
     if constexpr (!std::is_void<Answer>::value) {
       *(static_cast<std::optional<Answer>*>(OneShot::Metastack.back()->returnBuffer)) =
-        this->CommandClause(cmd, Resumption(resumption));
+        this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
     } else {
-      this->CommandClause(cmd, Resumption(resumption));
+      this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
     }
     return ctx::fiber();
   });
@@ -568,12 +569,12 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   // being resumed at the moment, and so we no longer need the
   // resumption object.
   if constexpr (!std::is_void<Out>::value) {
-    Out cmdResult = std::move(resumption->cmdResultTransfer->value);
-    resumption->storedMetastack.clear();
-    resumption->cmdResultTransfer = {};
+    Out cmdResult = std::move(resumption.cmdResultTransfer->value);
+    resumption.storedMetastack.clear();
+    resumption.cmdResultTransfer = {};
     return cmdResult;
   } else {
-    resumption->storedMetastack.clear();
+    resumption.storedMetastack.clear();
   }
 }
 

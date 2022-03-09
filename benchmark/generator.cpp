@@ -323,6 +323,7 @@ public:
 
 namespace OptStaticGenerator {
 
+
 // --------------
 // Internal stuff
 // --------------
@@ -366,7 +367,7 @@ class GeneratorHandler : public Handler<void, void, Yield<T>> {
   {
   }
 public:
-  Generator<T>* const gen;
+  Generator<T>* gen;
   GeneratorHandler(Generator<T>* gen) : gen(gen) { }
 };
 
@@ -394,14 +395,16 @@ public:
   Generator(const Generator&) = delete;
   Generator(Generator&& other)
   {
-    result = result.res;
-    other.result = {};
+    if (this != &other) {
+      result = result.res;
+      other.result = {};
+    }
   }
   Generator& operator=(const Generator&) = delete;
   Generator& operator=(Generator&& other)
   {
     if (this != &other) {
-      if (result) { delete result.value().resumption; }
+      //if (result) { delete result.value().resumption; }
       result = other.result;
       other.result = {};
     }
@@ -409,13 +412,13 @@ public:
   }
   T Value() const
   {
-    // if (!result) { throw std::out_of_range("Generator::Value"); }
+    //if (!result) { throw std::out_of_range("Generator::Value"); }
     return (*result).value;
   }
   bool Next()
   {
-    // if (!result) { throw std::out_of_range("Generator::Next"); }
-    OneShot::Resume(std::move(result->resumption));
+    //if (!result) { throw std::out_of_range("Generator::Value"); }
+    OneShot::Resume(std::move((*result).resumption));
     return result.has_value();
   }
   operator bool() const

@@ -63,7 +63,7 @@ let get () = perform Get
 
 In general, a *handler* is a piece of code that knows what to do with a set of commands. One can subsequently *handle* a computation by delimiting it using the handler. If in this computation an operation is invoked, the handler assumes control, receiving the command together with the computation captured as a *resumption*.
 
-In our library, we take advantage of the basic principle of object-oriented programming, that is, packing together data and code. And so, a handler is a class, which contains member functions that know how to handle particular commands, but it can also encapsulate as much data and auxiliary definitions as the programmer sees fit. Then, one handles a computation using a particular *object* of that class. This object lives as long as the computation (actually, even longer), providing a persistent "context of execution" of the handled computation. It is self-explanatory if we implement a handler for state using a data member of the handler:
+In our library, we take advantage of the basic principle of object-oriented programming, that is, packing together data and code. And so, a handler is a class, which contains member functions that know how to handle particular commands, but it can also encapsulate as much data and auxiliary definitions as the programmer sees fit. Then, they can handle a computation using a particular *object* of that class. This object live is managed by the library, providing a persistent "context of execution" of the handled computation. It is self-explanatory if we implement a handler for state using a data member of the handler:
 
 ```cpp
 template <typename T> // the type of the handled computation
@@ -72,11 +72,11 @@ public:
   State(int initialState) : state(initialState) { }
 private:
   int state;
-  T CommandClause(Get, std::unique_ptr<Resumption<int, T>> r) override
+  T CommandClause(Get, Resumption<int, T> r) override
   {
     return OneShot::TailResume(std::move(r), state);
   }
-  T CommandClause(Put p, std::unique_ptr<Resumption<void, T>> r) override
+  T CommandClause(Put p, Resumption<void, T> r) override
   {
     state = p.newState;
     return OneShot::TailResume(std::move(r));
@@ -92,19 +92,17 @@ The most popular approach in FP makes effect handlers syntactically quite simila
 
 We can handle a computation as follows:
 
-To handle a computation, one needs to create a new object of the derived class:
-
 ```cpp
 auto body = []() -> int { return get(put(get() * 2)); };
-OneShot::Handle<State>(body, 10); // returns 20
+OneShot::Handle<State<int>>(body, 10); // returns 20
 ```
 
-Note that the `Handle` function will take care of creating the handler object for us, forwarding its second argument, `10`, to the constructor of `State`. The lifetime of this object is managed by the library, and the programmer does not have to worry about its lifetime.
+Note that the `Handle` function will take care of creating the handler object for us, forwarding its subsequent arguments (in this case `10`) to the constructor of `State`.
 
 
 ## Resumptions
 
-Resumptions represent suspended computations that "hang" on a command. In FP, they sometimes are simply functions, in which the type of the argument is the return type of the command. They can also be a separate type (as in, again, Eff or Multicore OCaml). In this library, they are a separate type:
+Resumptions represent suspended computations that "hang" on a command. In FP, they can be functions, in which the type of the argument is the return type of the command. They can also be a separate type (as in, again, Eff or Multicore OCaml). In this library, they are a separate type:
 
 ```cpp
 template <typename Out, typename Answer>
@@ -115,18 +113,18 @@ We can *resume* (or "continue" as it is called in Multicore OCaml) a resumption 
 
 ```cpp
 template <typename Out, typename Answer>
-static Answer OneShot::Resume(std::unique_ptr<Resumption<Out, Answer>> r, Out cmdResult);
+static Answer OneShot::Resume(Resumption<Out, Answer> r, Out cmdResult);
 
 // specialisation for Out = void
 template <typename Answer>
-static Answer OneShot::Resume(std::unique_ptr<Resumption<void, Answer>> r);
+static Answer OneShot::Resume(Resumption<void, Answer> r);
 ```
 
-Resumptions in our library are one-shot, which means that you can resume each resumption only once. This is not only a technical matter, but more importantly it is in accordance with the C++ idiom RAII, which means that objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the use of `unique_ptr` - the `CommandClause` in the handler is given the "ownership" of the resumption in the form of a unique pointer, but if we want to resume, we needs to transfer the ownership of the resumption to the class `OneShot`. After this, the pointer becomes invalid, and so the user should not use it again.
+Resumptions in our library are one-shot, which means that you can resume each one at most once. This is not only a technical matter, but more importantly it is in accordance with RAII: objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the fact that `Resumption` is movabe, but not copyable. The handler is given the "ownership" of the resumption (the `Resumption` data type is actually a form of a smart pointer), but if we want to resume, we need to transfer the ownership of the resumption to the class `OneShot`. After this, the pointer becomes invalid, and so the user should not use it again.
 
 ## Other features of the library
 
-Our library offers additional forms of handlers and clauses, which lead to better readability and better performance. For example, we can use  the `FlatHandler` class to indicate that the return clause is always identity. Moreover, the respective clauses for `Put` and `Get`, are self- and tail-resumptive, which means that they resume the same continuation that they obtain as an argument ("self-") and that they return the result of resuming ("tail-"). Such clauses can be simplified using the `Plain` modifier as follows:
+Our library offers additional forms of handlers and clauses, which lead to better readability and better performance. For example, `FlatHandler` implements handlers in which the return clause is identity. Moreover, the respective clauses for `Put` and `Get`, are self- and tail-resumptive, which means that they resume the same continuation that they obtain as an argument ("self-") and that they return the result of resuming ("tail-"). Such clauses can be simplified using the `Plain` modifier as follows:
 
 ```cpp
 template <typename S>
@@ -153,11 +151,11 @@ public:
   HStateful(S initialState) : state(initialState) { }
 private:
   S state;
-  void CommandClause(Put<S> p) final override
+  void CommandClause(Put<S> p) final override  // no explicit resumption
   {
     state = p.newState;
   }
-  S CommandClause(Get<S>) final override
+  S CommandClause(Get<S>) final override  // ...same here
   {
     return state;
   }
