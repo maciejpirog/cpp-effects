@@ -107,7 +107,7 @@ public:
   {
     if (data) {
       data->cmdResultTransfer = {};
-      data->storedMetastack.clear();
+      std::list<MetaframePtr> _(std::move(data->storedMetastack));
     }
   }
   Resumption(const Resumption<Out, Answer>&) = delete;
@@ -332,7 +332,7 @@ public:
 
       Tangible<Body> b(body);
 
-      MetaframePtr returnFrame = Metastack.back();
+      MetaframePtr returnFrame(std::move(Metastack.back()));
       Metastack.pop_back();
 
       std::move(Metastack.back()->fiber).resume_with([&](ctx::fiber&&) -> ctx::fiber {

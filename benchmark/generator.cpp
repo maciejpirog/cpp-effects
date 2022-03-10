@@ -441,7 +441,7 @@ int main()
   std::cout << "--- generators: static vs dynamic invoke ---" << std::endl;
 
   volatile int64_t SUM = 0;
-  const int MAX = 100000;
+  const int MAX = 1000000;
 
   {
 
