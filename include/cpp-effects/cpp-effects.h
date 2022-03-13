@@ -113,10 +113,8 @@ public:
   Resumption(const Resumption<Out, Answer>&) = delete;
   Resumption(Resumption<Out, Answer>&& other)
   {
-    if (this != &other) {
-      data = other.data;
-      other.data = nullptr;
-    }
+    data = other.data;
+    other.data = nullptr;
   }
   Resumption& operator=(const Resumption<Out, Answer>&) = delete;
   Resumption& operator=(Resumption<Out, Answer>&& other)
@@ -133,7 +131,7 @@ public:
     data = nullptr;
     return d;
   }
-private:
+//private:
   ResumptionData<Out, Answer>* data = nullptr;
 };
 

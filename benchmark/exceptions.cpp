@@ -132,6 +132,9 @@ testNative(100000, 1);
 auto end = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count() << "ns" << "\t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count() / MAX) << "ns per iteration)" << std::endl;
 
+sum = 0;
+esum = 0;
+
 std::cout << "handlers:       " << std::flush;
 
 auto begin2 = std::chrono::high_resolution_clock::now();
@@ -139,12 +142,18 @@ testHandlers(100000, 1);
 auto end2 = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end2-begin2).count() << "ns" << "\t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(end2-begin2).count() / MAX) << "ns per iteration)" << std::endl;
 
+sum = 0;
+esum = 0;
+
 std::cout << "handlers-n-r:   " << std::flush;
 
 auto begin3 = std::chrono::high_resolution_clock::now();
 testHandlersNR(100000, 1);
 auto end3 = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end3-begin3).count() << "ns" << "\t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(end3-begin3).count() / MAX) << "ns per iteration)" << std::endl;
+
+sum = 0;
+esum = 0;
 
 
 std::cout << "s-handlers:     " << std::flush;
@@ -154,10 +163,15 @@ testSHandlers(100000, 1);
 auto ends2 = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(ends2-begins2).count() << "ns" << "\t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(ends2-begins2).count() / MAX) << "ns per iteration)" << std::endl;
 
+
+sum = 0;
+esum = 0;
+
 std::cout << "s-handlers-n-r: " << std::flush;
 
 auto begins3 = std::chrono::high_resolution_clock::now();
 testSHandlersNR(100000, 1);
 auto ends3 = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(ends3-begins3).count() << "ns" << "\t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(ends3-begins3).count() / MAX) << "ns per iteration)" << std::endl;
+
 }
