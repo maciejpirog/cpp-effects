@@ -131,7 +131,7 @@ public:
     data = nullptr;
     return d;
   }
-//private:
+private:
   ResumptionData<Out, Answer>* data = nullptr;
 };
 
