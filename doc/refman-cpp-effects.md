@@ -83,7 +83,7 @@ void foo(Resumption<void, int> r)
 
 #### :large_orange_diamond: Resumption<Out, Answer>::operator bool
 
-Check if the resumption is valid. The resumption becomes invalid if moved elsewhere (in paerticular, when resumed using [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
+Check if the resumption is valid. The resumption becomes invalid if moved elsewhere (in particular, when resumed using [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
 
 ```cpp
 operator bool() const;
@@ -222,7 +222,7 @@ class FlatHandler<void, Cmds...> : public Handler<void, void, Cmds>... {
 };
 ```
 
-- `typename Answer` - The overall answer type of a derived handler and the type of the handled computstion. Should be at least move-constructible and move-assignable.
+- `typename Answer` - The overall answer type of a derived handler and the type of the handled computation. Should be at least move-constructible and move-assignable.
 
 - `typename... Cmds` - The commands that are handled by this handler.
 
