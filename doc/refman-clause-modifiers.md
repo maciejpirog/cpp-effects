@@ -4,7 +4,7 @@
 
 This file contains modifiers that force specific shapes of command clauses in handlers, which is useful for readability (e.g., we can read from the type that we will not use the resumption) and performance (e.g., we don't allocate resumptions that are never used).
 
-Each modifier consists of a template, which marks a command in the type of the handler, and a specialisation of the `CommandClause` class that modifies the type of the clause in the definition of the handler. For example, we can use the `NoResume` modifier to specify that a particular handler will not need the resumption:
+Each modifier consists of a template, which marks a command in the type of the handler, and a specialisation of the [`CmdClause`](refman-cpp-effects.md#class-cmdclause) class that modifies the type of the clause in the definition of the handler. For example, we can use the `NoResume` modifier to specify that a particular handler will not need the resumption:
 
 ```cpp
 struct MyCmd : Command<int> { };
