@@ -103,13 +103,6 @@ public:
   Resumption() { }
   Resumption(ResumptionData<Out, Answer>* data) : data(data) { }
   Resumption(ResumptionData<Out, Answer>& data) : data(&data) { }
-  ~Resumption()
-  {
-    if (data) {
-      data->cmdResultTransfer = {};
-      std::list<MetaframePtr> _(std::move(data->storedMetastack));
-    }
-  }
   Resumption(const Resumption<Out, Answer>&) = delete;
   Resumption(Resumption<Out, Answer>&& other)
   {
@@ -124,6 +117,21 @@ public:
       other.data = nullptr;
     }
     return *this;
+  }
+  ~Resumption()
+  {
+    if (data) {
+      data->cmdResultTransfer = {};
+
+      // We need to move the resumption buffer out of the metaframe to
+      // break the pointer cycle, which might be problematic for
+      // shared pointers.
+      std::list<MetaframePtr> _(std::move(data->storedMetastack));
+    }
+  }
+  operator bool() const
+  {
+    return data != nullptr;
   }
   ResumptionData<Out, Answer>* Release()
   {
