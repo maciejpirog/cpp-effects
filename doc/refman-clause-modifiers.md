@@ -12,8 +12,8 @@ struct OtherCmd : Command<void> { };
 
 class MyHandler : public Handler <char, void, NoResume<MyCmd>, OtherCmd> {
   ...
-  char CommandClause(OtherCmd, std::unique_ptr<Resumption<void, char>>) { ... }
-  char CommandClause(MyCmd) { ... } // no "resumption" argument
+  char CommandClause(OtherCmd, Resumption<void, char>) { ... }  // regular clause
+  char CommandClause(MyCmd) { ... }                             // no resumption
 };
 ```
 
