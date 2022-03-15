@@ -16,7 +16,9 @@
 
 - [`FlatHandler`](refman-cpp-effects.md#class-flathandler) - Specialisation of `Handler` for generic handlers with identity return clause.
 
-- [`Resumption`](refman-cpp-effects.md#classes-resumptionbase-and-resumption) - The class for suspended computations that are given to the user in handlers' command clauses.
+- [`Resumption`](refman-cpp-effects.md#class-resumption) - Suspended computation, given to the user in handlers' command clauses.
+
+- [`ResumptionData` and `ResumptionBase`](refman-cpp-effects.md#classes-resumptiondata-and-resumptionbase) - "Bare" captured continuations that are not memory-managed by the library.
 
 - [`OneShot`](refman-cpp-effects.md#class-oneshot) - The actual interface (via static functions) of handling computations and invoking commands.
 

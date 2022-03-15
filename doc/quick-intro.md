@@ -8,16 +8,16 @@ Effect handlers first appeared in the area of functional programming (e.g., Eff,
 
 ## Commands
 
-In our library, *commands* (aka *operations*) are defined as classes derived from the `Command` template. The type argument of the template is the return (*out*, as we call it here) type of the command. For example, we can formulate the usual interface for mutable state as follows:
+In our library, *commands* (often known as *operations*) are defined as classes derived from the `Command` template. The type argument of the template is the return type of the command. For example, we can formulate the usual interface for mutable state of type `int` as follows:
 
 ```cpp
 struct Put : Command<void> { int newState; };
 struct Get : Command<int> { };
 ```
 
-Note that arguments of commands are data members of these classes.
+Data members of these classes are arguments of the commands.
 
-:point_right: In case you wonder, there is nothing magical in `Command`, it is defined as follows:
+:point_right: In case you were wondering, there is nothing magical in `Command`. It is defined as follows:
 
 ```cpp
 template <typename Out>
@@ -26,7 +26,7 @@ struct Command {
 };
 ```
 
-To perform (*invoke*) a command, we need to use an object of such a "command" class. The out type of the command becomes the result of the invocation:
+To *perform* (or: *invoke*) a command, we need to use an object of such a "command" class. The out type of the command becomes the result of the invocation:
 
 ```cpp
 template <typename Cmd>
@@ -47,7 +47,7 @@ int get()
 }
 ```
 
-:dromedary_camel: To compare, the equivalent code in Multicore OCaml is as follows (compare [ocaml-multicore/effects-examples/state.ml](https://github.com/ocaml-multicore/effects-examples/blob/master/state.ml)):
+:dromedary_camel: The equivalent code in Multicore OCaml is as follows (compare [ocaml-multicore/effects-examples/state.ml](https://github.com/ocaml-multicore/effects-examples/blob/master/state.ml)):
 
 ```
 (* definition of operations *)
@@ -61,9 +61,9 @@ let get () = perform Get
 
 ## Handlers
 
-In general, a *handler* is a piece of code that knows what to do with a set of commands. One can subsequently *handle* a computation by delimiting it using the handler. If in this computation an operation is invoked, the handler assumes control, receiving the command together with the computation captured as a *resumption*.
+In general, a *handler* is a piece of code that knows what to do with a set of commands. One can subsequently *handle* a computation by delimiting it using the handler. If in this computation an operation is invoked, the handler assumes control, receiving the command together with the computation captured as a *resumption* (aka *continuation*).
 
-In our library, we take advantage of the basic principle of object-oriented programming, that is, packing together data and code. And so, a handler is a class, which contains member functions that know how to handle particular commands, but it can also encapsulate as much data and auxiliary definitions as the programmer sees fit. Then, they can handle a computation using a particular *object* of that class. This object live is managed by the library, providing a persistent "context of execution" of the handled computation. It is self-explanatory if we implement a handler for state using a data member of the handler:
+In our library, we take advantage of the basic principle of object-oriented programming: packing together data and code. And so, a handler is a class that contains member functions that know how to handle particular commands, but it can also encapsulate as much data and auxiliary definitions as the programmer sees fit. Then, we can handle a computation using a particular *object* of that class. This object's life is managed by the library, providing a persistent "context of execution" of the handled computation. For example, we can define a handler for mutable state using a data member in the handler:
 
 ```cpp
 template <typename T> // the type of the handled computation
@@ -88,7 +88,7 @@ private:
 };
 ```
 
-The most popular approach in FP makes effect handlers syntactically quite similar to exception handlers. It is quite different here: a handler can be defined by deriving from the `Handler` class. The definitions of "command" and "return" clauses are defined by overriding appropriate virtual functions in `Handler`, one for each command listed in the template parameter list.
+FP usually makes effect handlers syntactically quite similar to exception handlers. We take a different approach here: a handler can be defined by deriving from the `Handler` class. The definitions of "command" and "return" clauses are defined by overriding appropriate virtual functions in `Handler`, one for each command listed in the template parameter list.
 
 We can handle a computation as follows:
 
@@ -97,19 +97,18 @@ auto body = []() -> int { return get(put(get() * 2)); };
 OneShot::Handle<State<int>>(body, 10); // returns 20
 ```
 
-Note that the `Handle` function will take care of creating the handler object for us, forwarding its subsequent arguments (in this case `10`) to the constructor of `State`.
-
+The `Handle` function will take care of creating the handler object for us, forwarding its subsequent arguments (in this case `10`) to the constructor of `State`.
 
 ## Resumptions
 
-Resumptions represent suspended computations that "hang" on a command. In FP, they can be functions, in which the type of the argument is the return type of the command. They can also be a separate type (as in, again, Eff or Multicore OCaml). In this library, they are a separate type:
+A resumptions represents a suspended computation that "hangs" on a command. In FP, they can be functions, in which the type of the argument is the return type of the command. They can also be a separate type (as in, again, Eff or Multicore OCaml). In this library, they are a separate type:
 
 ```cpp
 template <typename Out, typename Answer>
 class Resumption;
 ```
 
-We can *resume* (or "continue" as it is called in Multicore OCaml) a resumption using `OneShot::Resume`:
+We can *resume* (or *continue* as it is called in Multicore OCaml) a resumption using `OneShot::Resume`:
 
 ```cpp
 template <typename Out, typename Answer>
@@ -120,42 +119,24 @@ template <typename Answer>
 static Answer OneShot::Resume(Resumption<void, Answer> r);
 ```
 
-Resumptions in our library are one-shot, which means that you can resume each one at most once. This is not only a technical matter, but more importantly it is in accordance with RAII: objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the fact that `Resumption` is movabe, but not copyable. The handler is given the "ownership" of the resumption (the `Resumption` data type is actually a form of a smart pointer), but if we want to resume, we need to transfer the ownership of the resumption to the class `OneShot`. After this, the pointer becomes invalid, and so the user should not use it again.
+Resumptions in our library are one-shot, which means that you can resume each one at most once. This is not only a technical matter, but more importantly it is in accordance with RAII: objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the fact that `Resumption` is movabe, but not copyable. The handler is given the "ownership" of the resumption (the `Resumption` class is actually a form of a smart pointer), but if we want to resume, we need to transfer the ownership of the resumption back to the class `OneShot`. After this, the resumption becomes invalid, and so the user should not use it again.
 
 ## Other features of the library
 
-Our library offers additional forms of handlers and clauses, which lead to better readability and better performance. For example, `FlatHandler` implements handlers in which the return clause is identity. Moreover, the respective clauses for `Put` and `Get`, are self- and tail-resumptive, which means that they resume the same continuation that they obtain as an argument ("self-") and that they return the result of resuming ("tail-"). Such clauses can be simplified using the `Plain` modifier as follows:
+Our library offers additional forms of handlers and clauses, which lead to better readability and better performance. For example, `FlatHandler` implements handlers in which the return clause is identity, which is useful for polymorphic handlers in which the answer type can be `void`. Moreover, the respective clauses for `Put` and `Get` in the example above are self- and tail-resumptive, which means that they resume the same continuation that they obtain as an argument ("self-") and that they return the result of resuming ("tail-"). Such clauses can be simplified using the `Plain` modifier as follows:
 
 ```cpp
-template <typename S>
-struct Put : Command<void> {
-  S newState;
-};
-
-template <typename S>
-struct Get : Command<S> { };
-
-template <typename S>
-void put(S s) {
-  OneShot::InvokeCmd(Put<S>{{}, s});
-}
-
-template <typename S>
-S get() {
-  return OneShot::InvokeCmd(Get<S>{});
-}
-
-template <typename Answer, typename S>
-class HStateful : public FlatHandler<Answer, Plain<Put<S>>, Plain<Get<S>>> {
+template <typename Answer>
+class HStateful : public FlatHandler<Answer, Plain<Put>, Plain<Get>> {
 public:
-  HStateful(S initialState) : state(initialState) { }
+  HStateful(int initialState) : state(initialState) { }
 private:
-  S state;
-  void CommandClause(Put<S> p) final override  // no explicit resumption
+  int state;
+  void CommandClause(Put p) final override  // no explicit resumption
   {
     state = p.newState;
   }
-  S CommandClause(Get<S>) final override  // ...same here
+  int CommandClause(Get) final override  // ...same here
   {
     return state;
   }

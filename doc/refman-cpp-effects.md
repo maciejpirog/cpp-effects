@@ -68,7 +68,7 @@ Releases the pointer to the suspended computation.
 
 - **return value** `ResumptionData<Out, Answer>*` - The released pointer.
 
-:warning: **Warning:** Never use `delete` on the released pointer! If you want to get rid of it safely, wrap it back in a dummy `Resumption` value, and let it's destructor do the job. For example:
+**Warning:** :warning: Never use `delete` on the released pointer! If you want to get rid of it safely, wrap it back in a dummy `Resumption` value, and let it's destructor do the job. For example:
 
 ```cpp
 void foo(Resumption<void, int> r)
@@ -81,7 +81,7 @@ void foo(Resumption<void, int> r)
 
 ## classes `ResumptionData` and `ResumptionBase`
 
-Thre classes that represents "bare" captured continuations that are not memory-managed by the library.
+Classes that represents "bare" captured continuations that are not memory-managed by the library.
 
 ```cpp
 class ResumptionBase {
