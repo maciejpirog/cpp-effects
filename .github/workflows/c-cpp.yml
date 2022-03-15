@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: boost
-      run: sudo apt-get update && sudo apt-get install -yq libboost-context-dev
+      run: sudo apt-get --allow-releaseinfo-change update && sudo apt-get install -yq libboost-context-dev
     - name: configure
       run: cmake .
     - name: compiler-version
