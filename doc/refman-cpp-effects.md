@@ -92,7 +92,7 @@ Releases the pointer to the suspended computation.
 
 - **return value** `ResumptionData<Out, Answer>*` - The released pointer.
 
-**Warning:** :warning: Never use `delete` on the released pointer! If you want to get rid of it safely, wrap it back in a dummy `Resumption` value, and let it's destructor do the job. For example:
+**Warning:** :warning: Never use `delete` on the released pointer! If you want to get rid of it safely, wrap it back in a dummy `Resumption` value, and let its destructor do the job. For example:
 
 ```cpp
 void foo(Resumption<void, int> r)
