@@ -44,11 +44,13 @@ public:
   Resumption& operator=(const Resumption<Out, Answer>&) = delete;
   
   Resumption(Resumption<Out, Answer>&& other);
-  
+
   Resumption& operator=(Resumption<Out, Answer>&& other);
-  
-  operator bool() const;
-  
+
+  explicit operator bool() const;
+
+  bool operator!() const;
+
   ResumptionData<Out, Answer>* Release();
 ```
 
@@ -59,6 +61,26 @@ The `Resumption` class is actually a form of a smart pointer, so moving it aroun
 - `typename Out` - In a proper resumption, the output type of the command that suspended the computation. In a plain resumption, the input type of the lifted function.
 
 - `typename Answer` - The return type of the suspended computation (i.e., the return type of [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume) applied to the resumption).
+
+#### :large_orange_diamond: Resumption<Out, Answer>::operator bool
+
+Check if the resumption is valid. The resumption becomes invalid if moved elsewhere (in particular, when resumed using [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
+
+```cpp
+explicit operator bool() const;
+```
+
+- **return value** `bool` - Indicates if the resumption is valid.
+
+#### :large_orange_diamond: Resumption<Out, Answer>::operator!
+
+Check if the resumption is invalid. The resumption becomes invalid if moved elsewhere (in particular, when resumed using [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
+
+```cpp
+bool operator!() const;
+```
+
+- **return value** `bool` - Indicates if the resumption is invalid.
 
 #### :large_orange_diamond: Resumption<Out, Answer>::Release
 
@@ -80,16 +102,6 @@ void foo(Resumption<void, int> r)
   Resumption<void, int>{ptr};
 }
 ```
-
-#### :large_orange_diamond: Resumption<Out, Answer>::operator bool
-
-Check if the resumption is valid. The resumption becomes invalid if moved elsewhere (in particular, when resumed using [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
-
-```cpp
-operator bool() const;
-```
-
-- **return value** `bool` - Indicates if the resumption is valid.
 
 ## classes `ResumptionData` and `ResumptionBase`
 
