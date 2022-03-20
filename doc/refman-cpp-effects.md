@@ -300,11 +300,11 @@ public:
   
   static int64_t FreshLabel();
   
-  template <typename H>
-  static typename H::AnswerType Handle(std::function<typename H::BodyType()> body);  
-  
-  template <typename H>
-  static typename H::AnswerType Handle(int64_t label, std::function<typename H::BodyType()> body);
+  template <typename H, typename... Args>
+  static typename H::AnswerType Handle(std::function<typename H::BodyType()> body, Args&&... args);
+
+  template <typename H, typename... Args>
+  static typename H::AnswerType Handle(int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
   
   template <typename H>
   static typename H::AnswerType HandleWith(

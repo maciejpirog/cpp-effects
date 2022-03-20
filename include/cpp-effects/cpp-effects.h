@@ -123,15 +123,18 @@ public:
     if (data) {
       data->cmdResultTransfer = {};
 
-      // We need to move the resumption buffer out of the metaframe to
-      // break the pointer cycle, which might be problematic for
-      // shared pointers.
+      // We move the resumption buffer out of the metaframe to break
+      // the pointer cycle.
       std::list<MetaframePtr> _(std::move(data->storedMetastack));
     }
   }
-  operator bool() const
+  explicit operator bool() const
   {
     return data != nullptr;
+  }
+  bool operator!() const
+  {
+    return data == nullptr;
   }
   ResumptionData<Out, Answer>* Release()
   {
