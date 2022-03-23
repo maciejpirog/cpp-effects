@@ -17,7 +17,7 @@ struct Get : Command<int> { };
 
 Data members of these classes are arguments of the commands.
 
-:point_right: In case you were wondering, there is nothing magical in `Command`. It is defined as follows:
+:point_right: There is nothing magical in `Command`. It is defined as follows:
 
 ```cpp
 template <typename Out>
@@ -74,12 +74,12 @@ private:
   int state;
   T CommandClause(Get, Resumption<int, T> r) override
   {
-    return OneShot::TailResume(std::move(r), state);
+    return std::move(r).TailResume(state);
   }
   T CommandClause(Put p, Resumption<void, T> r) override
   {
     state = p.newState;
-    return OneShot::TailResume(std::move(r));
+    return std::move(r).TailResume();
   }
   T ReturnClause(T v) override
   {
@@ -88,7 +88,7 @@ private:
 };
 ```
 
-FP usually makes effect handlers syntactically quite similar to exception handlers. We take a different approach here: a handler can be defined by deriving from the `Handler` class. The definitions of "command" and "return" clauses are defined by overriding appropriate virtual functions in `Handler`, one for each command listed in the template parameter list.
+FP usually makes effect handlers syntactically quite similar to exception handlers. We take a different approach here: a handler can be defined by deriving from the `Handler` class. The user defines "command" and "return" clauses by overriding appropriate virtual functions in `Handler`, one for each command listed in the template parameter list.
 
 We can handle a computation as follows:
 
@@ -97,7 +97,7 @@ auto body = []() -> int { return get(put(get() * 2)); };
 OneShot::Handle<State<int>>(body, 10); // returns 20
 ```
 
-The `Handle` function will take care of creating the handler object for us, forwarding its subsequent arguments (in this case `10`) to the constructor of `State`.
+The `Handle` function will take care of creating the handler object for us, forwarding its subsequent arguments (`10`) to the constructor of `State`.
 
 ## Resumptions
 
@@ -108,18 +108,18 @@ template <typename Out, typename Answer>
 class Resumption;
 ```
 
-We can *resume* (or *continue* as it is called in Multicore OCaml) a resumption using `OneShot::Resume`:
+We can *resume* (or *continue* as it is called in Multicore OCaml) a resumption using the `Resume` member function:
 
 ```cpp
 template <typename Out, typename Answer>
-static Answer OneShot::Resume(Resumption<Out, Answer> r, Out cmdResult);
+static Answer Resumption<Out, Answer>::Resume(Out cmdResult) &&;
 
 // specialisation for Out = void
 template <typename Answer>
-static Answer OneShot::Resume(Resumption<void, Answer> r);
+static Answer Resumption<void, Answer>::Resume() &&;
 ```
 
-Resumptions in our library are one-shot, which means that you can resume each one at most once. This is not only a technical matter, but more importantly it is in accordance with RAII: objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the fact that `Resumption` is movabe, but not copyable. The handler is given the "ownership" of the resumption (the `Resumption` class is actually a form of a smart pointer), but if we want to resume, we need to transfer the ownership of the resumption back to the class `OneShot`. After this, the resumption becomes invalid, and so the user should not use it again.
+Resumptions in our library are one-shot, which means that you can resume each one at most once. This is not only a technical matter, but more importantly it is in accordance with RAII: objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the fact that `Resumption` is movabe, but not copyable. The handler is given the "ownership" of the resumption (the `Resumption` class is actually a form of a smart pointer), but if we want to resume, we need to give up the ownership of the resumption. After this, the resumption becomes invalid, and so the user should not use it again.
 
 ## Other features of the library
 

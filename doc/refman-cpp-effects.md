@@ -29,15 +29,18 @@ Reveals the return type of the command.
 
 ## class `Resumption`
 
-Resumption represents a captured continuation, that is, a suspended computation. A resumption is given to the user either as the argument of [`Handler::CmdClause`](refman-cpp-effects.md#large_orange_diamond-cmdclauseanswercmdcommandclause), or can be lifted from a function using [`OneShot::MakeResumption`](refman-cpp-effects.md#large_orange_diamond-oneshotmakeresumption).
+Resumption represents a captured continuation, that is, a suspended computation. A resumption is given to the user either as the argument of [`Handler::CommandClause`](refman-cpp-effects.md#large_orange_diamond-cmdclauseanswercmdcommandclause), or can be lifted from a function using a constructor.
 
 ```cpp
 template <typename Out, typename Answer>
 class Resumption
+{
 public:
   Resumption();
   
   Resumption(ResumptionData<Out, Answer>* data) : data(data);
+  
+  Resumption(std::function<Answer(Out)>);
 
   Resumption(const Resumption<Out, Answer>&) = delete;
   
@@ -52,6 +55,25 @@ public:
   bool operator!() const;
 
   ResumptionData<Out, Answer>* Release();
+  
+  Answer Resume(Out cmdResult) &&;
+
+  Answer TailResume(Out cmdResult) &&;
+};
+
+// Specialisation for void
+template <typename Answer>
+class Resumption<void, Answer>
+{
+public:
+  // Same as the general version, except for:
+  
+  Resumption(std::function<Answer()>);
+  
+  Answer Resume() &&;
+
+  Answer TailResume() &&;
+};
 ```
 
 Objects of the `Resumption` class are movable but not copyable. This is because they represent suspended **one-shot** continuations.
@@ -60,11 +82,43 @@ The `Resumption` class is actually a form of a smart pointer, so moving it aroun
 
 - `typename Out` - In a proper resumption, the output type of the command that suspended the computation. In a plain resumption, the input type of the lifted function.
 
-- `typename Answer` - The return type of the suspended computation (i.e., the return type of [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume) applied to the resumption).
+- `typename Answer` - The return type of the suspended computation (i.e., the return type of `Resumption<Out, Answer>::Resume`).
+
+
+#### :large_orange_diamond: Resumption<Out, Answer>::Resumption()
+
+```cpp
+/* 1 */ Resumption<Out, Answer>::Resumption()
+  
+/* 2 */ Resumption<Out, Answer>::Resumption(ResumptionData<Out, Answer>* data)
+
+/* 3 */ Resumption<Out, Answer>::Resumption(std::function<Answer(Out)> func)
+
+/* 4 */ Resumption<void, Answer>::Resumption(std::function<Answer()> func)
+```
+
+Constructors.
+
+- `1` - Create a trivial **invalid** resumption.
+
+- `2` - Create a resumption from data previously released with `Release`.
+
+- `3` - Lift a function to a resumption.
+
+- `4` - As above, specialisation for `Out == void`.
+
+Arguments:
+
+- `ResumptionData<Out, Answer>* data` - Data previously released with `Release`.
+
+- `std::function<Answer(Out)> func` - The lifted function.
+
+- `std::function<Answer()> func` - The lifted function (specialisation for `Out == void`).
+
 
 #### :large_orange_diamond: Resumption<Out, Answer>::operator bool
 
-Check if the resumption is valid. The resumption becomes invalid if moved elsewhere (in particular, when resumed using [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
+Check if the resumption is valid. The resumption becomes invalid if moved elsewhere (in particular, when resumed).
 
 ```cpp
 explicit operator bool() const;
@@ -74,7 +128,7 @@ explicit operator bool() const;
 
 #### :large_orange_diamond: Resumption<Out, Answer>::operator!
 
-Check if the resumption is invalid. The resumption becomes invalid if moved elsewhere (in particular, when resumed using [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
+Check if the resumption is invalid. The resumption becomes invalid if moved elsewhere (in particular, when resumed).
 
 ```cpp
 bool operator!() const;
@@ -103,6 +157,68 @@ void foo(Resumption<void, int> r)
 }
 ```
 
+#### :large_orange_diamond: Resumption<Out, Answer>::Resume
+
+```cpp
+Answer Resumption<Out, Answer>::Resume(Out cmdResult) &&
+
+// overload for Out == void
+Answer Resumption<void, Answer>::Resume() &&
+```
+
+Resume the suspended computation captured in the resumption.
+
+- `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
+
+- **Return value** `Answer` - The result of the resumed computation.
+
+#### :large_orange_diamond: OneShot::TailResume
+
+```cpp
+Answer Resumption<Out, Answer>::TailResume(Out cmdResult) &&
+
+// overload for Out == void
+Answer Resumption<void, Answer>::TailResume() &&
+```
+
+Use to resume the suspended computation captured in the resumption in a tail position in the command clause. This is to be used **only inside a command clause** as the returned expression. Semantically, for an rvalue reference `r`, the expressions `return r.Resume(...);` and `return r.TailResume(...);` are semantically equivalent, but the latter does not build up the call stack.
+
+- `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
+
+- **Return value** `Answer` - The result of the resumed computation.
+
+
+Tail-resumes are useful in command clauses such as:
+
+```cpp
+int CommandClause(SomeCommand, Resumption<void, int> r) override
+{
+  // do sth
+  return std::move(r).TailResume();
+}
+```
+
+In this example, we will build up the call stack until the entire handler returns a final answer (resulting in a "stack leak"). The library has a separate trampolining mechanism built in to avoid this:
+
+```cpp
+  // do sth
+  return std::move(r).TailResume();
+```
+
+**NOTE:** `TailResume` can be used only if `Answer` is trivially constructible. Consider the following command clause:
+
+```cpp
+class H : Handler<Answer, void, Op> {
+  // ...
+  Answer CommandClause(Op, Resumption<void, Answer> r) override
+  {
+    return std::move(r).TailResume();
+  }
+}
+```
+
+What happens behind the scenes is that `TailResume` returns a trivial value of type `Answer`, while the real resuming happens in a trampoline hidden in the `OneShot::Handle` function.
+
 ## classes `ResumptionData` and `ResumptionBase`
 
 Classes that represents "bare" captured continuations that are not memory-managed by the library.
@@ -122,7 +238,7 @@ class ResumptionData : public ResumptionBase
 
 - `typename Out` - In a proper resumption, the output type of the command that suspended the computation. In a plain resumption, the input type of the lifted function.
 
-- `typename Answer` - The return type of the suspended computation (i.e., the return type of [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume) applied to the resumption).
+- `typename Answer` - The return type of the suspended computation (i.e., the return type of `Resumption<Out, Answer>::Resume` applied to the resumption).
 
 ## class `CmdClause`
 
@@ -151,7 +267,7 @@ A handler handles a particular command `Cmd` if it inherits from `CmdClause<...,
 
 - `Cmd c` - The handled command. The object `c` contains "arguments" of the command. When a handler inherits from a number of `CmdClause`'s, the right clause is chosen via the overloading resolution mechanism out of the overloads of `CommandClauses` in the handler based on the type `Cmd`.
 
-- `Resumption<typename Cmd::OutType, Answer> r` - The captured resumption. When the user invokes a command, the control goes back to the handler and the computation delimited by the handler is captured as the resumption `r`. Since resumptions are one-shot, when we resume `r` using [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume), we have to transfer the ownership of `r` back to the class `OneShot`, which makes resuming `r` twice illegal.
+- `Resumption<typename Cmd::OutType, Answer> r` - The captured resumption. When the user invokes a command, the control goes back to the handler and the computation delimited by the handler is captured as the resumption `r`. Since resumptions are one-shot, when we resume `r`, we have to give up the ownership of `r`, which makes `r` invalid.
 
 - **return value** `Answer` - The overall result of handling the computation.
 
@@ -303,7 +419,7 @@ class Counter<void> : public Handler<void, Plain<Tick>> {
 
 ## class `OneShot`
 
-The interface to deal with handlers and resumptions.
+The interface to deal with handling and invoking commands.
 
 ```cpp
 class OneShot {
@@ -332,29 +448,11 @@ public:
   template <typename Cmd>
   static typename Cmd::OutType InvokeCmd(int64_t label, const Cmd& cmd);
   
-  template <typename Out, typename Answer>
-  static Resumption<Out, Answer> MakeResumption(std::function<Answer(Out)> func);
-
-  template <typename Answer>
-  static Resumption<void, Answer> MakeResumption(std::function<Answer()> func);
-  
-  template <typename Out, typename Answer>
-  static Answer Resume(Resumption<Out, Answer> r, Out cmdResult);
-
-  template <typename Answer>
-  static Answer Resume(Resumption<void, Answer> r);
-  
   template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd);
   
   template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd);
-
-  template <typename Out, typename Answer>
-  static Answer TailResume(Resumption<Out, Answer> r, Out cmdResult);
-
-  template <typename Answer>
-  static Answer TailResume(Resumption<void, Answer> r);
 };
 ```
 
@@ -434,53 +532,8 @@ Used in a handled computation to invoke a particular command. The current comput
 
 - `const Cmd& cmd` - The invoked command.
 
-- **Return value** `Cmd::OutType` - the value with which the suspended computation is resumed (the argument to [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
+- **Return value** `Cmd::OutType` - the value with which the suspended computation is resumed.
 
-#### :large_orange_diamond: OneShot::MakeResumption
-
-```cpp
-template <typename Out, typename Answer>
-static Resumption<Out, Answer> MakeResumption(std::function<Answer(Out)> func);
-
-// overload for Out == void
-template <typename Answer>
-static Resumption<void, Answer> MakeResumption(std::function<Answer()> func);
-```
-
-Lift a function to a resumption.
-
-- `typename Out` - The input type of the lifted function. (Note that the name `Out` is used throughout the library for the output type of a command, which is the **input** type of a resumption, hence the possibly confusing name.)
-
-- `typename Answer` - The output type of the lifted function, and so the answer type of the resulting resumption.
-
-- `std::function<Answer(Out)> func` - The lifted function.
-
-- `std::function<Answer()> func` - The lifted function (an overload for `Out == void`).
-
-- **Return value** `Resumption<Out, Answer>` - the resulting resumption.
-
-#### :large_orange_diamond: OneShot::Resume
-
-```cpp
-template <typename Out, typename Answer>
-static Answer Resume(Resumption<Out, Answer> r, Out cmdResult);
-
-// overload for Out == void
-template <typename Answer>
-static Answer Resume(Resumption<void, Answer> r);
-```
-
-Resume a resumption.
-
-- `typename Out` - The input type of the resumption. (Note that the name `Out` is used throughout the library for the output type of a command, which is the **input** type of a resumption, hence the possibly confusing name.)
-
-- `typename Answer` - The answer type of the resulting resumption.
-
-- `Resumption<Out, Answer> r` - The resumed resumption.
-
-- `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
-
-- **Return value** `Answer` - The result of the resumed computation.
 
 #### :large_orange_diamond: OneShot::StaticInvokeCmd
 
@@ -504,61 +557,5 @@ Used in a handled computation to invoke a particular command (similar to [`OneSh
 
 The point of `StaticInvokeCmd` is that we often know upfront which handler will be used for a particular command. This way, instead of dynamically checking if a given handler is able to handle the invoke command, we can statically cast it to an appropriate handler `H`, trading dynamic type safety for performance.
 
-- **Return value** `Cmd::OutType` - the value with which the suspended computation is resumed (the argument to [`OneShot::Resume`](refman-cpp-effects.md#large_orange_diamond-oneshotresume)).
+- **Return value** `Cmd::OutType` - the value with which the suspended computation is resumed.
 
-
-#### :large_orange_diamond: OneShot::TailResume
-
-```cpp
-template <typename Out, typename Answer>
-static Answer TailResume(Resumption<Out, Answer> r, Out cmdResult);
-
-// overload for Out == void
-template <typename Answer>
-static Answer TailResume(Resumption<void, Answer> r);
-```
-
-Tail-resume a resumption. This is to be used **only inside a command clause** as the returned expression. Semantically, `return OneShot::Resume(...);` is equivalent to `return OneShot::TailResume(...);`, but it does not build up the call stack.
-
-
-- `typename Out` - The input type of the resumption. (Note that the name `Out` is used throughout the library for the output type of a command, which is the **input** type of a resumption, hence the possibly confusing name.)
-
-- `typename Answer` - The answer type of the resulting resumption.
-
-- `Resumption<Out, Answer> r` - The resumed resumption.
-
-- `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
-
-- **Return value** `Answer` - The result of the resumed computation.
-
-
-Tail-resumes are useful in command clauses such as:
-
-```cpp
-int CommandClause(SomeCommand, Resumption<void, int> r) override
-{
-  // do sth
-  return OneShot::Resume(std::move(r));
-}
-```
-
-In this example, we will build up the call stack until the entire handler returns a final answer (a "stack leak"). The library has a separate trampolining mechanism to avoid this with:
-
-```cpp
-  // do sth
-  return OneShot::TailResume(std::move(r));
-```
-
-**NOTE:** `TailResume` can be used only if `Answer` is trivially constructible. Consider the following command clause:
-
-```cpp
-class H : Handler<Answer, void, Op> {
-  // ...
-  Answer CommandClause(Op, Resumption<void, Answer> r) override
-  {
-    return OneShot::TailResume(std::move(r));
-  }
-}
-```
-
-What happens behind the scenes is that `TailResume` returns a trivial value of type `Answer`, while the real resuming happens in a trampoline hidden in the implementation of `OneShot`.
