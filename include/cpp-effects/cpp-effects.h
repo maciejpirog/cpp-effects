@@ -462,6 +462,29 @@ public:
     }
   }
 
+  static std::list<MetaframePtr>::reverse_iterator FindHandler(int64_t gotoHandler)
+  {
+    auto cond = [&](const MetaframePtr& mf) { return mf->label == gotoHandler; };
+    return std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
+  }
+
+  template <typename Cmd>
+  static typename Cmd::OutType InvokeCmd(std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
+  {
+    if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
+      return canInvoke->InvokeCmd(++it, cmd);
+    }
+    std::cerr << "error: selected handler does not handle " << typeid(Cmd).name() << std::endl;
+    DebugPrintMetastack();
+    exit(-1);
+  }
+
+  template <typename H, typename Cmd>
+  static typename Cmd::OutType StaticInvokeCmd(std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
+  {
+    return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
+  }
+
   // In the InvokeCmd... methods we rely on the virtual method of the
   // metaframe, as at this point we cannot know what AnswerType and
   // BodyType are.
