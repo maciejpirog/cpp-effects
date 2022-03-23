@@ -189,6 +189,21 @@ void testStaticPlainHandlers(int max)
   });
 }
 
+// --------------------
+// Known plain handlers
+// --------------------
+
+__attribute__((noinline))
+void testKnownPlainHandlers(int max)
+{
+  OneShot::Handle<PHan>(10, [=](){
+    for (int i = 0; i < max; i++) {
+      auto it = OneShot::FindHandler(10);
+      SUM += OneShot::StaticInvokeCmd<PHan>(it, Foo{{}, i});
+    }
+  });
+}
+
 // ----
 // Main
 // ----
@@ -270,4 +285,11 @@ auto begins3 = std::chrono::high_resolution_clock::now();
 testStaticPlainHandlers(MAX);
 auto ends3 = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(ends3-begins3).count() << "ns" << " \t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(ends3-begins3).count() / MAX) << "ns per iteration)" << std::endl;
+
+std::cout << "known-handlers:   " << std::flush;
+
+auto beginks3 = std::chrono::high_resolution_clock::now();
+testKnownPlainHandlers(MAX);
+auto endks3 = std::chrono::high_resolution_clock::now();
+std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(endks3-beginks3).count() << "ns" << " \t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(endks3-beginks3).count() / MAX) << "ns per iteration)" << std::endl;
 }
