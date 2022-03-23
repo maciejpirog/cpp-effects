@@ -49,7 +49,7 @@ public:
     while (!queue.empty()) { // Round-robin scheduling
       auto resumption = std::move(queue.front());
       queue.pop_front();
-      OneShot::Resume(std::move(resumption));
+      std::move(resumption).Resume();
     }
   }
 private:
@@ -65,7 +65,7 @@ private:
   void CommandClause(Fork f, Res r) override
   {
     queue.push_back(std::move(r));
-    queue.push_back(OneShot::MakeResumption<void>(std::bind(Run, f.proc)));
+    queue.push_back({std::bind(Run, f.proc)});
   }
   void ReturnClause() override { }
 };
@@ -87,7 +87,7 @@ void worker(int k)
 void starter()
 {
   for (int i = 0; i < 5; ++i) {
-    fork(std::bind(worker, i));
+    fork([=](){ worker(i); });
   }
 }
 

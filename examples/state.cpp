@@ -124,14 +124,14 @@ class HLambda : public Handler<std::function<Answer(S)>, Answer, Put<S>, Get<S>>
     Resumption<void, std::function<Answer(S)>> r) override
   {
     return [p, r = r.Release()](S) -> Answer {
-      return OneShot::Resume(Resumption<void, std::function<Answer(S)>>(r))(p.newState);
+      return Resumption<void, std::function<Answer(S)>>(r).Resume()(p.newState);
     };
   }
   std::function<Answer(S)> CommandClause(Get<S>,
     Resumption<S, std::function<Answer(S)>> r) override
   {
     return [r = r.Release()](S s) -> Answer {
-      return OneShot::Resume(Resumption<S, std::function<Answer(S)>>(r), s)(s);
+      return Resumption<S, std::function<Answer(S)>>(r).Resume(s)(s);
     };
   }
   std::function<Answer(S)> ReturnClause(Answer a) override
@@ -146,14 +146,14 @@ class HLambda<void, S> : public Handler<std::function<void(S)>, void, Put<S>, Ge
     Resumption<void, std::function<void(S)>> r) override
   {
     return [r = r.Release(), p](S) -> void {
-      OneShot::Resume(Resumption<void, std::function<void(S)>>(r))(p.newState);
+      Resumption<void, std::function<void(S)>>(r).Resume()(p.newState);
     };
   }
   std::function<void(S)> CommandClause(Get<S>,
     Resumption<S, std::function<void(S)>> r) override
   {
     return [r = r.Release()](S s) -> void {
-      OneShot::Resume(Resumption<S, std::function<void(S)>>(r), s)(s);
+      Resumption<S, std::function<void(S)>>(r).Resume(s)(s);
     };
   }
   std::function<void(S)> ReturnClause() override
@@ -196,7 +196,8 @@ class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAi
   typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<Bottom, typename H::AnswerType>) override {
     return OneShot::Handle<Aid<H>>([=](){
       return OneShot::HandleWith([=](){
-          return OneShot::Resume(Resumption<void, typename H::BodyType>(c.res)); }, c.han);
+        return Resumption<void, typename H::BodyType>(c.res).Resume();
+      }, c.han);
     });
   }
   typename H::AnswerType ReturnClause(typename H::AnswerType a) override
@@ -242,7 +243,7 @@ private:
   const R val;  // Note the const modifier!
   Answer CommandClause(Read<R>, Resumption<int,Answer> r) override
   {
-    return OneShot::TailResume(std::move(r), val);
+    return std::move(r).TailResume(val);
   }
   Answer ReturnClause(Answer b) override
   {
@@ -256,11 +257,11 @@ class HSwitching : public Handler<Answer, Answer, Put<S>, Get<S>> {
   {
     OneShot::InvokeCmd(
       CmdAbet<ReaderType<Answer, S>>{{}, std::make_shared<Reader<Answer, S>>(p.newState)});
-    return OneShot::Resume(std::move(r));
+    return std::move(r).Resume();
   }
   Answer CommandClause(Get<S>, Resumption<S, Answer> r) override
   {
-    return OneShot::Resume(std::move(r), OneShot::InvokeCmd(Read<S>{}));
+    return std::move(r).Resume(OneShot::InvokeCmd(Read<S>{}));
   }
   Answer ReturnClause(Answer a) override
   {

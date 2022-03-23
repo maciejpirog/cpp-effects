@@ -22,7 +22,7 @@ private:
   int CommandClause(Print, Resumption<void, int> r) override
   {
     std::cout << msg << std::flush;
-    return OneShot::Resume(std::move(r));
+    return std::move(r).Resume();
   }
   int ReturnClause(int a) override { return a + 1; }
 };

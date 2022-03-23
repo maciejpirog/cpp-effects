@@ -100,8 +100,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    result = OneShot::Resume(
-      Resumption<void, Result<T>>(result.value().resumption));
+    result = Resumption<void, Result<T>>(result.value().resumption).Resume();
     return result.has_value();
   }
   operator bool() const

@@ -124,7 +124,7 @@ class Han : public Handler<void, void, Foo> {
   void ReturnClause () override { }
   void CommandClause(Foo c, Resumption<int, void> r) override
   {
-    OneShot::TailResume(std::move(r), (a * c.x + b) % 101);
+    std::move(r).TailResume((a * c.x + b) % 101);
   }
 };
 
@@ -242,7 +242,6 @@ auto begindc = std::chrono::high_resolution_clock::now();
 testDCast(MAX);
 auto enddc = std::chrono::high_resolution_clock::now();
 std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(enddc-begindc).count() << "ns" << " \t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(enddc-begindc).count() / MAX) << "ns per iteration)" << std::endl;
-
 
 std::cout << "handlers:         " << std::flush;
 

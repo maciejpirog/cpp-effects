@@ -103,6 +103,7 @@ public:
   Resumption() { }
   Resumption(ResumptionData<Out, Answer>* data) : data(data) { }
   Resumption(ResumptionData<Out, Answer>& data) : data(&data) { }
+  Resumption(std::function<Answer(Out)>);
   Resumption(const Resumption<Out, Answer>&) = delete;
   Resumption(Resumption<Out, Answer>&& other)
   {
@@ -124,17 +125,17 @@ public:
       data->cmdResultTransfer = {};
 
       // We move the resumption buffer out of the metaframe to break
-      // the pointer cycle.
+      // the pointer/stack cycle.
       std::list<MetaframePtr> _(std::move(data->storedMetastack));
     }
   }
   explicit operator bool() const
   {
-    return data != nullptr;
+    return data != nullptr && (bool)data->storedMetastack.front().fiber;
   }
   bool operator!() const
   {
-    return data == nullptr;
+    return data == nullptr || !data->storedMetastack.front().fiber;
   }
   ResumptionData<Out, Answer>* Release()
   {
@@ -142,9 +143,73 @@ public:
     data = nullptr;
     return d;
   }
+  Answer Resume(Out cmdResult) &&
+  {
+    data->cmdResultTransfer->value = std::move(cmdResult);
+    return Release()->Resume();
+  }
+  Answer TailResume(Out cmdResult) &&;
 private:
   ResumptionData<Out, Answer>* data = nullptr;
 };
+
+template <typename Answer>
+class Resumption<void, Answer>
+{
+  friend class OneShot;
+public:
+  Resumption() { }
+  Resumption(ResumptionData<void, Answer>* data) : data(data) { }
+  Resumption(ResumptionData<void, Answer>& data) : data(&data) { }
+  Resumption(std::function<Answer()>);
+  Resumption(const Resumption<void, Answer>&) = delete;
+  Resumption(Resumption<void, Answer>&& other)
+  {
+    data = other.data;
+    other.data = nullptr;
+  }
+  Resumption& operator=(const Resumption<void, Answer>&) = delete;
+  Resumption& operator=(Resumption<void, Answer>&& other)
+  {
+    if (this != &other) {
+      data = other.data;
+      other.data = nullptr;
+    }
+    return *this;
+  }
+  ~Resumption()
+  {
+    if (data) {
+      data->cmdResultTransfer = {};
+
+      // We move the resumption buffer out of the metaframe to break
+      // the pointer/stack cycle.
+      std::list<MetaframePtr> _(std::move(data->storedMetastack));
+    }
+  }
+  explicit operator bool() const
+  {
+    return data != nullptr && (bool)data->storedMetastack.front().fiber;;
+  }
+  bool operator!() const
+  {
+    return data == nullptr || !data->storedMetastack.front().fiber;
+  }
+  ResumptionData<void, Answer>* Release()
+  {
+    auto d = data;
+    data = nullptr;
+    return d;
+  }
+  Answer Resume() &&
+  {
+    return Release()->Resume();
+  }
+  Answer TailResume() &&;
+private:
+  ResumptionData<void, Answer>* data = nullptr;
+};
+
 
 // ----------
 // Metaframes
@@ -354,7 +419,7 @@ public:
         return ctx::fiber();
       });
       
-      // Unreachable, this fiber is now destroyed
+      // Unreachable: this fiber is now destroyed
       std::cerr << "error: impssible!\n";
       exit(-1);
     }};
@@ -454,98 +519,6 @@ public:
     auto it = Metastack.rbegin();
     return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
   }
-
-  template <typename Out, typename Answer>
-  static Answer Resume(Resumption<Out, Answer> r, Out cmdResult)
-  {
-    r.data->cmdResultTransfer->value = std::move(cmdResult);
-    return r.Release()->Resume();
-  }
-
-  template <typename Answer>
-  static Answer Resume(Resumption<void, Answer> r)
-  {
-    return r.Release()->Resume();
-  }
-
-  template <typename Out, typename Answer>
-  static Answer TailResume(Resumption<Out, Answer> r, Out cmdResult)
-  {
-    r.data->cmdResultTransfer->value = std::move(cmdResult);
-    // Trampoline back to Handle
-    tailAnswer() = TailAnswer{r.Release()};
-    if constexpr (!std::is_void<Answer>::value) {
-      return Answer();
-    }
-  }
-
-  template <typename Answer>
-  static Answer TailResume(Resumption<void, Answer> r)
-  {
-    // Trampoline back to Handle
-    tailAnswer() = TailAnswer{r.Release()};
-    if constexpr (!std::is_void<Answer>::value) {
-      return Answer();
-    }
-  }
-
-  template <typename Out, typename Answer>
-  static Resumption<Out, Answer> MakeResumption(std::function<Answer(Out)> func)
-  {
-    Resumption<Out, Answer> resumption;
-
-    struct Abort : Command<void> { };
-    class HAbort : public FlatHandler<void, Abort> {
-      void CommandClause(Abort, Resumption<void, void>) override { }
-    };
-
-    struct Arg : Command<Out> { Resumption<Out, Answer>& res; };
-    class HArg : public FlatHandler<Answer, Arg> {
-      Answer CommandClause(Arg a, Resumption<Out, Answer> r) override
-      {
-        a.res = std::move(r);
-        InvokeCmd(Abort{});
-      }
-    };
-
-    Handle<HAbort>([&resumption, func](){
-      Handle<HArg>([&resumption, func](){
-        return func(InvokeCmd(Arg{{}, resumption}));
-      });
-    });
-
-    return resumption;
-  }
-
-  template <typename Answer>
-  static Resumption<void, Answer> MakeResumption(std::function<Answer()> func)
-  {
-    Resumption<void, Answer> resumption;
-
-    struct Abort : Command<void> { };
-    class HAbort : public FlatHandler<void, Abort> {
-      void CommandClause(Abort, Resumption<void, void>) override { }
-    };
-
-    struct Arg : Command<void> { Resumption<void, Answer>& res; };
-    class HArg : public FlatHandler<Answer, Arg> {
-      Answer CommandClause(Arg a, Resumption<void, Answer> r) override
-      {
-        a.res = std::move(r);
-        InvokeCmd(Abort{});
-      }
-    };
-
-    Handle<HAbort>([&resumption, func](){
-      Handle<HArg>([&resumption, func](){
-          InvokeCmd(Arg{{}, resumption});
-          return func();
-      });
-    });
-
-    return resumption;
-  }
-
 }; // class OneShot
 
 template <typename Answer, typename Cmd>
@@ -587,6 +560,63 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   }
 }
 
+  template <typename Out, typename Answer>
+  Resumption<Out, Answer>::Resumption(std::function<Answer(Out)> func)
+  {
+    Resumption<Out, Answer> resumption;
+
+    struct Abort : Command<void> { };
+    class HAbort : public FlatHandler<void, Abort> {
+      void CommandClause(Abort, Resumption<void, void>) override { }
+    };
+
+    struct Arg : Command<Out> { Resumption<Out, Answer>& res; };
+    class HArg : public FlatHandler<Answer, Arg> {
+      Answer CommandClause(Arg a, Resumption<Out, Answer> r) override
+      {
+        a.res = std::move(r);
+        OneShot::InvokeCmd(Abort{});
+      }
+    };
+
+    OneShot::Handle<HAbort>([&resumption, func](){
+      OneShot::Handle<HArg>([&resumption, func](){
+        return func(OneShot::InvokeCmd(Arg{{}, resumption}));
+      });
+    });
+
+    data = resumption.Release();
+  }
+
+  template <typename Answer>
+  Resumption<void, Answer>::Resumption(std::function<Answer()> func)
+  {
+    Resumption<void, Answer> resumption;
+
+    struct Abort : Command<void> { };
+    class HAbort : public FlatHandler<void, Abort> {
+      void CommandClause(Abort, Resumption<void, void>) override { }
+    };
+
+    struct Arg : Command<void> { Resumption<void, Answer>& res; };
+    class HArg : public FlatHandler<Answer, Arg> {
+      Answer CommandClause(Arg a, Resumption<void, Answer> r) override
+      {
+        a.res = std::move(r);
+        OneShot::InvokeCmd(Abort{});
+      }
+    };
+
+    OneShot::Handle<HAbort>([&resumption, func](){
+      OneShot::Handle<HArg>([&resumption, func](){
+        OneShot::InvokeCmd(Arg{{}, resumption});
+        return func();
+      });
+    });
+
+    data = resumption.Release();
+  }
+
 template <typename Out, typename Answer>
 Answer ResumptionData<Out, Answer>::Resume()
 {
@@ -623,6 +653,27 @@ void ResumptionData<Out, Answer>::TailResume()
     OneShot::Metastack.splice(OneShot::Metastack.end(), this->storedMetastack);
     return ctx::fiber();
   });
+}
+
+template <typename Out, typename Answer>
+Answer Resumption<Out, Answer>::TailResume(Out cmdResult) &&
+{
+  data->cmdResultTransfer->value = std::move(cmdResult);
+  // Trampoline back to Handle
+  OneShot::tailAnswer() = TailAnswer{Release()};
+  if constexpr (!std::is_void<Answer>::value) {
+    return Answer();
+  }
+}
+
+template <typename Answer>
+Answer Resumption<void, Answer>::TailResume() &&
+{
+  // Trampoline back to Handle
+  OneShot::tailAnswer() = TailAnswer{Release()};
+  if constexpr (!std::is_void<Answer>::value) {
+    return Answer();
+  }
 }
 
 // --------------

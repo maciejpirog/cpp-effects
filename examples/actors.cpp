@@ -107,8 +107,8 @@ private:
   {
     scheduler->active.push_back({
       f.actor,
-      OneShot::MakeResumption<void>([f, this](){ scheduler->Run(f.actor); })});
-    OneShot::Resume(std::move(r));
+      {[f, this](){ scheduler->Run(f.actor); }}});
+    std::move(r).Resume();
   }
   void ReturnClause() override
   {
@@ -124,7 +124,7 @@ void Scheduler::wake()
     auto resumption = std::move(it->actorResumption);
     currentActor = it->actorData;
     active.erase(it);
-    OneShot::TailResume(std::move(resumption));
+    std::move(resumption).TailResume();
     return;
   }
   std::cerr << "deadlock detected" << std::endl;

@@ -123,7 +123,7 @@ private:
   {
     std::string lmsg = this->msg;
     std::cout << lmsg << "+" << std::flush;
-    OneShot::Resume(std::move(r));
+    std::move(r).Resume();
     std::cout << lmsg << "-" << std::flush;
   }
   void ReturnClause() override { }

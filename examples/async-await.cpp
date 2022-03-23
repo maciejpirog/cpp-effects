@@ -70,7 +70,7 @@ private:
     std::advance(it, rand() % queue.size());
     auto resumption = std::move(*it);
     queue.erase(it);
-    OneShot::Resume(std::move(resumption));
+    std::move(resumption).Resume();
   }
   void CommandClause(Yield, Res r) override
   {
@@ -113,9 +113,9 @@ template <typename T>
 Future<T>* async(std::function<T()> f)
 {
   auto future = new Future<T>;
-  queue.push_back(OneShot::MakeResumption<void>([f, future]() {
+  queue.push_back({[f, future]() {
     Scheduler<T>::Run(future, f);
-  }));
+  }});
   return future;
 } 
 

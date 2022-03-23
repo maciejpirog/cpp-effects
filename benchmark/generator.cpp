@@ -99,8 +99,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    result = OneShot::Resume(
-      std::move(result.value().resumption));
+    result = std::move(result.value().resumption).Resume();
     return result.has_value();
   }
   operator bool() const
@@ -202,7 +201,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    result = OneShot::Resume(Resumption<void, Result<T>>(result.value().resumption));
+    result = Resumption<void, Result<T>>(result.value().resumption).Resume();
     return result.has_value();
   }
   operator bool() const
@@ -309,7 +308,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    OneShot::Resume(Resumption<void,void>(result.value().resumption));
+    Resumption<void,void>(result.value().resumption).Resume();
     return result.has_value();
   }
   operator bool() const
@@ -418,7 +417,7 @@ public:
   bool Next()
   {
     //if (!result) { throw std::out_of_range("Generator::Value"); }
-    OneShot::Resume(std::move((*result).resumption));
+    std::move((*result).resumption).Resume();
     return result.has_value();
   }
   operator bool() const
@@ -529,7 +528,7 @@ public:
   bool Next()
   {
     //if (!result) { throw std::out_of_range("Generator::Value"); }
-    OneShot::Resume(std::move((*result).resumption));
+    std::move((*result).resumption).Resume();
     return result.has_value();
   }
   operator bool() const

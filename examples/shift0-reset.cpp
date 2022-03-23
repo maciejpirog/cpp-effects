@@ -47,7 +47,7 @@ Hole shift0(std::function<Answer(std::function<Answer(Hole)>)> e)
   return OneShot::InvokeCmd(Shift0<Answer, Hole>{{},
     [=](Resumption<Hole, Answer> k) -> Answer {
       return e([k = k.Release()](Hole out) -> Answer {
-        return OneShot::Resume(Resumption<Hole, Answer>(k), out);
+        return Resumption<Hole, Answer>(k).Resume(out);
       });
     }
   });

@@ -40,7 +40,7 @@ private:
   void CommandClause(Cmd, Resumption<void, void> r) override
   {
     this->PrintStatus();
-    OneShot::Resume(std::move(r));
+    std::move(r).Resume();
     this->PrintStatus(); // Do I still exist?
   }
 };
@@ -83,7 +83,7 @@ void resumptionEscape()
 
   std::cout << "[A short break]" << std::endl;
 
-  OneShot::Resume(std::move(res));
+  std::move(res).Resume();
 }
 
 // ----

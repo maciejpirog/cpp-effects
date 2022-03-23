@@ -25,7 +25,7 @@ private:
   const R val;
   void CommandClause(Read<R>, Resumption<R, void> r) override
   {
-    OneShot::TailResume(std::move(r), val);
+    std::move(r).TailResume(val);
   }
   void ReturnClause() override { }
 };

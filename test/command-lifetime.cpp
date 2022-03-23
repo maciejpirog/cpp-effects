@@ -36,7 +36,7 @@ class MyHandler : public Handler<void, void, Cmd> {
   void CommandClause(Cmd c, Resumption<void, void> r) override
   {
     std::cout << "In handler: received command id = " << c.id << std::endl;
-    OneShot::Resume(std::move(r));
+    std::move(r).Resume();
     std::cout << "In handler: still using command id = " << c.id << std::endl;
   }
 };

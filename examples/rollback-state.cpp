@@ -55,7 +55,7 @@ class RollbackState : public Handler<bool, void, Rollback, AssignCmd> {
   }
   bool CommandClause(AssignCmd a, Resumption<void, bool> r) override
   {
-    bool result = OneShot::Resume(std::move(r));
+    bool result = std::move(r).Resume();
     if (!result) { a.asg->undo(); }
     delete a.asg;
     return result;

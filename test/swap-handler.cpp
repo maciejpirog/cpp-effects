@@ -29,7 +29,7 @@ class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAi
   typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<Bottom, typename H::AnswerType>) override {
     return OneShot::Handle<Aid<H>>([=](){
       return OneShot::HandleWith([=](){
-          return OneShot::Resume(Resumption<void, typename H::BodyType>(c.res)); },
+          return Resumption<void, typename H::BodyType>(c.res).Resume(); },
         c.han);
     });
   }
@@ -78,7 +78,7 @@ private:
   const R val;
   Answer CommandClause(Read<R>, Resumption<R, Answer> r) override
   {
-    return OneShot::Resume(std::move(r), val);
+    return std::move(r).Resume(val);
   }
   Answer ReturnClause(Answer b) override
   {

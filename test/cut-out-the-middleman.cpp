@@ -33,7 +33,7 @@ class HInner : public Handler<void, void, PingInner, CutMiddlemanAid> {
   void CommandClause(PingInner, Resumption<void, void> r) override
   {
     std::cout << "Inner!" << std::endl;
-    OneShot::TailResume(std::move(r));
+    std::move(r).TailResume();
   }
   void CommandClause(CutMiddlemanAid, Resumption<void, void> r) override
   {
@@ -46,11 +46,11 @@ class HOuter : public Handler<void, void, PingOuter, CutMiddlemanAbet> {
   void CommandClause(PingOuter, Resumption<void, void> r) override
   {
     std::cout << "Outer!" << std::endl;
-    OneShot::TailResume(std::move(r));
+    std::move(r).TailResume();
   }
   void CommandClause(CutMiddlemanAbet a, Resumption<void, void>) override
   {
-    OneShot::TailResume(Resumption<void, void>(a.res));
+    Resumption<void, void>(a.res).TailResume();
   }
 
   void ReturnClause() override { }
@@ -107,7 +107,7 @@ void break_()
 }
 int resume()
 {
-  return OneShot::Resume(Resumption<void, int>(Res));
+  return Resumption<void, int>(Res).Resume();
 }
 
 class HIP : public Handler<int, int, Inc, Break> {
@@ -118,7 +118,7 @@ class HIP : public Handler<int, int, Inc, Break> {
   }
   int CommandClause(Inc, Resumption<void, int> r) override
   {
-    return OneShot::Resume(std::move(r)) + 1;
+    return std::move(r).Resume() + 1;
   }
   int ReturnClause(int v) override { return v; }
 };

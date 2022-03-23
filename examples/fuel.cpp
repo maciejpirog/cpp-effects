@@ -36,7 +36,7 @@ private:
   {
     if (fuel < c.amount) { return {}; } // Not enough fuel left to continue
     fuel -= c.amount;
-    return OneShot::TailResume(std::move(r));
+    return std::move(r).Resume();
   }
   std::optional<T> ReturnClause(T val) override
   {
@@ -54,7 +54,7 @@ private:
     Resumption<void, std::tuple<T, int64_t>> r) override
   {
     fuel += c.amount;
-    return OneShot::TailResume(std::move(r));
+    return std::move(r).Resume();
   }
   std::tuple<T, int64_t> ReturnClause(T val) override
   {
