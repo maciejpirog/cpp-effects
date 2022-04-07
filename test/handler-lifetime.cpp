@@ -59,9 +59,11 @@ void afterReturn()
 // resumption lives on
 // -----------------------------------------------------------
 
+struct OtherCmd : Command<void> { };
+
 Resumption<void, void> res;
 
-class EscapeHandler :  public Handler<void, void, Cmd> {
+class EscapeHandler :  public Handler<void, void, Cmd, OtherCmd> {
 public:
   ~EscapeHandler() { std::cout << "The handler is dead!" << std::endl; }
 private:
@@ -69,6 +71,12 @@ private:
   {
     res = std::move(r);
     std::cout << "Must give us pause!" << std::endl;
+  }
+  void CommandClause(OtherCmd, Resumption<void, void> r)
+  {
+    std::cout << "[[This is other cmd]]" << std::endl;
+    std::move(r).TailResume();
+    //std::cout << "[[This is other cmd]]" << std::endl;
   }
   void ReturnClause() { std::cout << "Thanks!" << std::endl; }
 };
@@ -79,6 +87,10 @@ void resumptionEscape()
     std::cout << "To be" << std::endl;
     OneShot::InvokeCmd(Cmd{});
     std::cout << "Or not to be" << std::endl;
+    OneShot::InvokeCmd(OtherCmd{});
+    OneShot::InvokeCmd(OtherCmd{});
+    OneShot::InvokeCmd(OtherCmd{});
+    std::cout << "??" << std::endl;
   });
 
   std::cout << "[A short break]" << std::endl;

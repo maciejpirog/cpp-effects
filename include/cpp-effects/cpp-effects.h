@@ -74,8 +74,12 @@ struct Command {
 // Resumptions
 // -----------
 
+template <typename Out, typename Answer> class Resumption;
+
 class ResumptionBase {
   friend class OneShot;
+  template <typename, typename> friend class Resumption;
+  template <typename, typename> friend class ResumptionData;
 public:
   virtual ~ResumptionBase() { }
 protected:
@@ -209,7 +213,6 @@ public:
 private:
   ResumptionData<void, Answer>* data = nullptr;
 };
-
 
 // ----------
 // Metaframes
@@ -561,6 +564,10 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
     // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
     resumption.storedMetastack.back()->fiber = std::move(prev);
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
+
+    // Keep the handler alive for the duration of the command clause call
+    MetaframePtr _(resumption.storedMetastack.front());
+
     if constexpr (!std::is_void<Answer>::value) {
       *(static_cast<std::optional<Answer>*>(OneShot::Metastack.back()->returnBuffer)) =
         this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
@@ -583,62 +590,62 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   }
 }
 
-  template <typename Out, typename Answer>
-  Resumption<Out, Answer>::Resumption(std::function<Answer(Out)> func)
-  {
-    Resumption<Out, Answer> resumption;
+template <typename Out, typename Answer>
+Resumption<Out, Answer>::Resumption(std::function<Answer(Out)> func)
+{
+  Resumption<Out, Answer> resumption;
 
-    struct Abort : Command<void> { };
-    class HAbort : public FlatHandler<void, Abort> {
-      void CommandClause(Abort, Resumption<void, void>) override { }
-    };
+  struct Abort : Command<void> { };
+  class HAbort : public FlatHandler<void, Abort> {
+    void CommandClause(Abort, Resumption<void, void>) override { }
+  };
 
-    struct Arg : Command<Out> { Resumption<Out, Answer>& res; };
-    class HArg : public FlatHandler<Answer, Arg> {
-      Answer CommandClause(Arg a, Resumption<Out, Answer> r) override
-      {
-        a.res = std::move(r);
-        OneShot::InvokeCmd(Abort{});
-      }
-    };
+  struct Arg : Command<Out> { Resumption<Out, Answer>& res; };
+  class HArg : public FlatHandler<Answer, Arg> {
+    Answer CommandClause(Arg a, Resumption<Out, Answer> r) override
+    { 
+      a.res = std::move(r);
+      OneShot::InvokeCmd(Abort{});
+    }
+  };
 
-    OneShot::Handle<HAbort>([&resumption, func](){
-      OneShot::Handle<HArg>([&resumption, func](){
-        return func(OneShot::InvokeCmd(Arg{{}, resumption}));
-      });
+  OneShot::Handle<HAbort>([&resumption, func](){
+    OneShot::Handle<HArg>([&resumption, func](){
+      return func(OneShot::InvokeCmd(Arg{{}, resumption}));
     });
+  });
 
-    data = resumption.Release();
-  }
+  data = resumption.Release();
+}
 
-  template <typename Answer>
-  Resumption<void, Answer>::Resumption(std::function<Answer()> func)
-  {
-    Resumption<void, Answer> resumption;
+template <typename Answer>
+Resumption<void, Answer>::Resumption(std::function<Answer()> func)
+{
+  Resumption<void, Answer> resumption;
 
-    struct Abort : Command<void> { };
-    class HAbort : public FlatHandler<void, Abort> {
-      void CommandClause(Abort, Resumption<void, void>) override { }
-    };
+  struct Abort : Command<void> { };
+  class HAbort : public FlatHandler<void, Abort> {
+    void CommandClause(Abort, Resumption<void, void>) override { }
+  };
 
-    struct Arg : Command<void> { Resumption<void, Answer>& res; };
-    class HArg : public FlatHandler<Answer, Arg> {
-      Answer CommandClause(Arg a, Resumption<void, Answer> r) override
-      {
-        a.res = std::move(r);
-        OneShot::InvokeCmd(Abort{});
-      }
-    };
+  struct Arg : Command<void> { Resumption<void, Answer>& res; };
+  class HArg : public FlatHandler<Answer, Arg> {
+    Answer CommandClause(Arg a, Resumption<void, Answer> r) override
+    {
+      a.res = std::move(r);
+      OneShot::InvokeCmd(Abort{});
+    }
+  };
 
-    OneShot::Handle<HAbort>([&resumption, func](){
-      OneShot::Handle<HArg>([&resumption, func](){
-        OneShot::InvokeCmd(Arg{{}, resumption});
-        return func();
-      });
+  OneShot::Handle<HAbort>([&resumption, func](){
+    OneShot::Handle<HArg>([&resumption, func](){
+      OneShot::InvokeCmd(Arg{{}, resumption});
+      return func();
     });
+  });
 
-    data = resumption.Release();
-  }
+  data = resumption.Release();
+}
 
 template <typename Out, typename Answer>
 Answer ResumptionData<Out, Answer>::Resume()
@@ -655,6 +662,13 @@ Answer ResumptionData<Out, Answer>::Resume()
       return ctx::fiber();
     });
 
+    // Trampoline tail-resumes
+    while (OneShot::tailAnswer()) {
+      TailAnswer tempTans = OneShot::tailAnswer().value();
+      OneShot::tailAnswer() = {};
+      tempTans.resumption->TailResume();
+    }
+
     OneShot::Metastack.back()->returnBuffer = prevBuffer;
     return std::move(*answer);
   } else {
@@ -664,6 +678,13 @@ Answer ResumptionData<Out, Answer>::Resume()
       OneShot::Metastack.splice(OneShot::Metastack.end(), this->storedMetastack);
       return ctx::fiber();
     });
+
+    // Trampoline tail-resumes
+    while (OneShot::tailAnswer()) {
+      TailAnswer tempTans = OneShot::tailAnswer().value();
+      OneShot::tailAnswer() = {};
+      tempTans.resumption->TailResume();
+    }
   }
 }
 

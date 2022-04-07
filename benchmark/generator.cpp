@@ -10,6 +10,7 @@
 #include <chrono>
 
 #include "cpp-effects/cpp-effects.h"
+#include "cpp-effects/clause-modifiers.h"
 
 using namespace CppEffects;
 
@@ -538,7 +539,6 @@ public:
 
 }
 
-
 namespace KnownStaticGenerator {
 
 // --------------
@@ -579,6 +579,118 @@ struct GenState {
 
 template <typename T>
 class GeneratorHandler : public Handler<void, void, CmdYield<T>> {
+  void CommandClause(CmdYield<T> y, Resumption<void, void> r) final override
+  {
+    gen->result = GenState<T>{y.value, std::move(r)};
+  }
+  void ReturnClause() final override
+  {
+  }
+public:
+  Generator<T>* gen;
+  GeneratorHandler(Generator<T>* gen) : gen(gen) { }
+};
+
+// ----------------------
+// Programmer's interface
+// ----------------------
+
+// When a generator is created, its body is executed until the first
+// Yield. It is only because in this example we want the programmer's
+// interface to be as simple as possible, so that the "there is a
+// value" and "you can resume me" states of a generator always hve the
+// same value, available via operator bool.
+
+template <typename T>
+class Generator {
+public:
+  Generator(std::function<void(Yield<T>)> f)
+  {
+    auto label = OneShot::FreshLabel();
+    OneShot::Handle<GeneratorHandler<T>>(label, [&](){
+      auto it = OneShot::FindHandler(label);
+      f(Yield<T>{it});
+    }, this);
+  }
+  Generator() { } // Create a dummy generator that generates nothing
+  Generator(const Generator&) = delete;
+  Generator(Generator&& other)
+  {
+    if (this != &other) {
+      result = result.res;
+      other.result = {};
+    }
+  }
+  Generator& operator=(const Generator&) = delete;
+  Generator& operator=(Generator&& other)
+  {
+    if (this != &other) {
+      //if (result) { delete result.value().resumption; }
+      result = other.result;
+      other.result = {};
+    }
+    return *this;
+  }
+  T Value() const
+  {
+    //if (!result) { throw std::out_of_range("Generator::Value"); }
+    return (*result).value;
+  }
+  bool Next()
+  {
+    //if (!result) { throw std::out_of_range("Generator::Value"); }
+    std::move((*result).resumption).Resume();
+    return result.has_value();
+  }
+  operator bool() const
+  {
+    return result.has_value();
+  }
+  Result<T> result = {};
+};
+
+}
+
+namespace KnownStaticGeneratorNoManage {
+
+// --------------
+// Internal stuff
+// --------------
+
+template <typename T>
+class GeneratorHandler;
+
+template <typename T>
+struct CmdYield : Command<void> {
+  const T value;
+};
+
+template <typename T>
+struct Yield {
+  std::list<MetaframePtr>::reverse_iterator it;
+  void operator()(const T& x) const
+  {
+    OneShot::StaticInvokeCmd<GeneratorHandler<T>>(it, CmdYield<T>{{}, x});
+  }
+};
+
+template <typename T>
+struct GenState;
+
+template <typename T>
+using Result = std::optional<GenState<T>>;
+
+template <typename T>
+class Generator;
+
+template <typename T>
+struct GenState {
+  T value;
+  Resumption<void, void> resumption;
+};
+
+template <typename T>
+class GeneratorHandler : public Handler<void, void, NoManage<CmdYield<T>>> {
   void CommandClause(CmdYield<T> y, Resumption<void, void> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
@@ -801,6 +913,29 @@ int main()
   std::cout << "known-static:  " << std::flush;
 
   KnownStaticGenerator::Generator<int> snaturals([](auto yield) {
+    int i = 0;
+    while (true) { yield(i++); }
+  });
+
+  auto begin = std::chrono::high_resolution_clock::now();
+
+  for (int i = 0; i <= MAX; i++) {
+    SUM = SUM + snaturals.Value();
+    snaturals.Next();
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count() << "ns" << " \t(" << (int)(std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count() / MAX) << "ns per iteration)" <<std::endl;
+
+  }
+
+  SUM = 0;
+
+  {
+
+  std::cout << "no-manage:     " << std::flush;
+
+  KnownStaticGeneratorNoManage::Generator<int> snaturals([](auto yield) {
     int i = 0;
     while (true) { yield(i++); }
   });
