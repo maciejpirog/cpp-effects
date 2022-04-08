@@ -43,6 +43,7 @@ struct Plain { };
 template <typename Answer, typename Cmd>
 class CmdClause<Answer, Plain<Cmd>> : public CanInvokeCmdClause<Cmd> {
   friend class OneShot;
+  template <typename, typename, typename...> friend class Handler;
 protected:
   virtual typename Cmd::OutType CommandClause(Cmd) = 0;
 private:
@@ -87,6 +88,7 @@ struct NoResume { };
 template <typename Answer, typename Cmd>
 class CmdClause<Answer, NoResume<Cmd>> : public CanInvokeCmdClause<Cmd> {
   friend class OneShot;
+  template <typename, typename, typename...> friend class Handler;
 protected:
   virtual Answer CommandClause(Cmd) = 0;
 private:
@@ -139,6 +141,7 @@ struct NoManage { };
 template <typename Answer, typename Cmd>
 class CmdClause<Answer, NoManage<Cmd>> : public CanInvokeCmdClause<Cmd> {
   friend class OneShot;
+  template <typename, typename, typename...> friend class Handler;
 protected:
   virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
 private:

@@ -9,6 +9,7 @@
 #include <string>
 
 #include "cpp-effects/cpp-effects.h"
+#include "cpp-effects/clause-modifiers.h"
 
 using namespace CppEffects;
 
@@ -40,7 +41,7 @@ struct GenState {
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<Result<T>, void, Yield<T>> {
+class GeneratorHandler : public Handler<Result<T>, void, NoManage<Yield<T>>> {
   Result<T> CommandClause(Yield<T> y, Resumption<void, Result<T>> r) override
   {
     return GenState<T>{y.value, r.Release()};

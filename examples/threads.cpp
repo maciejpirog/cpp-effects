@@ -12,6 +12,7 @@
 #include <tuple>
 
 #include "cpp-effects/cpp-effects.h"
+#include "cpp-effects/clause-modifiers.h"
 
 using namespace CppEffects;
 
@@ -25,6 +26,8 @@ struct Fork : Command<void> {
   std::function<void()> proc;
 };
 
+struct Kill : Command<void> { };
+
 void yield()
 {
   OneShot::InvokeCmd(Yield{});
@@ -35,13 +38,18 @@ void fork(std::function<void()> proc)
   OneShot::InvokeCmd(Fork{{}, proc});
 }
 
+void kill()
+{
+  OneShot::InvokeCmd(Kill{});
+}
+
 // ---------------------
 // Scheduler for threads
 // ---------------------
 
 using Res = Resumption<void, void>;
 
-class Scheduler : public Handler<void, void, Yield, Fork> {
+class Scheduler : public Handler<void, void, Yield, Fork, Kill> {
 public:
   static void Start(std::function<void()> f)
   {
@@ -67,6 +75,7 @@ private:
     queue.push_back(std::move(r));
     queue.push_back({std::bind(Run, f.proc)});
   }
+  void CommandClause(Kill, Res) override { }
   void ReturnClause() override { }
 };
 

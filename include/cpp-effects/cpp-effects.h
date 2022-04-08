@@ -270,6 +270,7 @@ protected:
 template <typename Answer, typename Cmd>
 class CmdClause : public CanInvokeCmdClause<Cmd> {
   friend class OneShot;
+  template <typename, typename, typename...> friend class Handler;
 protected:
   virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
 private:
@@ -291,6 +292,7 @@ template <typename Answer, typename Body, typename... Cmds>
 class Handler : public Metaframe, public CmdClause<Answer, Cmds>... {
   friend class OneShot;
   using CmdClause<Answer, Cmds>::CommandClause...;
+  using CmdClause<Answer, Cmds>::InvokeCmd...;
 public:
   using AnswerType = Answer;
   using BodyType = Body;
@@ -306,6 +308,7 @@ template <typename Answer, typename... Cmds>
 class Handler<Answer, void, Cmds...> : public Metaframe, public CmdClause<Answer, Cmds>... {
   friend class OneShot;
   using CmdClause<Answer, Cmds>::CommandClause...;
+  using CmdClause<Answer, Cmds>::InvokeCmd...;
 public:
   using AnswerType = Answer;
   using BodyType = void;
