@@ -67,37 +67,10 @@ int product(const std::vector<int>& v)
     0); // the default value is 0
 }
 
-struct Log : Command<void> { std::string msg; };
-
-class Logger : public Handler<std::string, void, Log> {
-public:
-  Logger(std::string separator) : separator(separator) { }
-private:
-  const std::string separator;
-  std::string ReturnClause() override
-  {
-    return "";
-  }
-  std::string CommandClause(Log l, Resumption<void, std::string> r) override
-  {
-    auto&& temp = std::move(r).Resume();
-    return l.msg + this->separator + temp;
-  }
-};
-
-void foo()
-{
-  OneShot::InvokeCmd(Log{{}, "hello"});
-  OneShot::InvokeCmd(Log{{}, "world"});
-}
-
-
 int main()
 {
   std::cout << product({1, 2, 3, 4, 5}) << std::flush << std::endl;
   std::cout << product({1, 2, 0, 4, 5}) << std::flush << std::endl;
-
-  std::cout << OneShot::Handle<Logger>(foo, " ") << std::endl;
 
   // Output:
   // 120
