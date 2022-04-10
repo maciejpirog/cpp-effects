@@ -18,6 +18,9 @@ using namespace CppEffects;
 // --------------
 
 template <typename T>
+class GeneratorHandler;
+
+template <typename T>
 struct Yield : Command<void> {
   T value;
 };
@@ -25,7 +28,7 @@ struct Yield : Command<void> {
 template <typename T>
 void yield(int64_t label, T x)
 {
-  OneShot::InvokeCmd(label, Yield<T>{{}, x});
+  OneShot::StaticInvokeCmd<GeneratorHandler<T>>(label, Yield<T>{{}, x});
 }
 
 template <typename T>
@@ -37,14 +40,14 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  ResumptionData<void, Result<T>>* resumption;
+  Resumption<void, Result<T>> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<Result<T>, void, NoManage<Yield<T>>> {
   Result<T> CommandClause(Yield<T> y, Resumption<void, Result<T>> r) override
   {
-    return GenState<T>{y.value, r.Release()};
+    return GenState<T>{y.value, std::move(r)};
   }
   Result<T> ReturnClause() override
   {
@@ -72,26 +75,8 @@ public:
       f([label](T x) { yield<T>(label, x); });
     });
   }
-  Generator() { } // Create a dummy generator that generates nothing
-  Generator(const Generator&) = delete;
-  Generator(Generator&& other)
+  Generator() // Create a dummy generator that generates nothing
   {
-    result = result.res;
-    other.result = {};
-  }
-  Generator& operator=(const Generator&) = delete;
-  Generator& operator=(Generator&& other)
-  {
-    if (this != &other) {
-      if (result) { delete result.value().resumption; }
-      result = other.result;
-      other.result = {};
-    }
-    return *this;
-  }
-  ~Generator()
-  {
-    if (result) { Resumption<void, Result<T>>{result->resumption}; }
   }
   T Value() const
   {
@@ -100,11 +85,11 @@ public:
   }
   bool Next()
   {
-    if (!result) { throw std::out_of_range("Generator::Value"); }
-    result = Resumption<void, Result<T>>(result.value().resumption).Resume();
+    if (!result) { throw std::out_of_range("Generator::Next"); }
+    result = std::move(result->resumption).Resume();
     return result.has_value();
   }
-  operator bool() const
+  explicit operator bool() const
   {
     return result.has_value();
   }
@@ -131,7 +116,7 @@ int main()
     yield("Makalu");
   });
 
-  while (peaks) {
+  while ((bool)peaks) {
     std::cout << naturals.Value() << " " << peaks.Value() << std::endl;
     naturals.Next();
     peaks.Next();

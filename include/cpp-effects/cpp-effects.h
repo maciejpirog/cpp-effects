@@ -91,8 +91,7 @@ class ResumptionData final : public ResumptionBase {
   friend class OneShot;
   template <typename, typename> friend class CmdClause;
   template <typename, typename> friend class Resumption;
-protected:
-  ResumptionData() { }
+private:
   std::list<MetaframePtr> storedMetastack;
   std::optional<Tangible<Out>> cmdResultTransfer; // Used to transfer data between fibers
   Answer Resume();

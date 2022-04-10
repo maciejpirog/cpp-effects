@@ -172,7 +172,7 @@ Resume the suspended computation captured in the resumption.
 
 - **Return value** `Answer` - The result of the resumed computation.
 
-#### :large_orange_diamond: OneShot::TailResume
+#### :large_orange_diamond: Resumption<Out, Answer>::TailResume
 
 ```cpp
 Answer Resumption<Out, Answer>::TailResume(Out cmdResult) &&
@@ -232,7 +232,6 @@ public:
 template <typename Out, typename Answer>
 class ResumptionData : public ResumptionBase
 {
-  Resumption() = delete;
 };
 ```
 
