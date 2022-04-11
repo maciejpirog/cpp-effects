@@ -123,9 +123,30 @@ int main()
 
 [1] - In the library handlers are objects, so they can naturally contain any data, auxiliary functions, and additional programmer's interface.
 
-## Build instructions
+## Using in your project
 
-The library is header-only, so to use it just include the headers and link with boost.context.
+The library is header-only, so to use it just include the headers and link with boost.context. On most systems, boost is available via a package manager, e.g.,
+
+- macOS: `brew install boost`
+
+- Ubuntu: `apt-get install libboost-context-dev`
+
+You can link with boost using cmake as follows. In your `CMakeLists.txt`, use the following:
+
+```
+FIND_PACKAGE (Boost 1.70 COMPONENTS context REQUIRED)
+
+if (Boost_FOUND)
+  link_libraries (Boost::context)
+  add_executable (my_program my_program.cpp)
+else()
+  message (STATUS "Boost not found!")
+endif()
+
+```
+
+## Building examples
+
 
 This repository contains some examples, tests, and benchmarks. The easiest way to build these is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
 

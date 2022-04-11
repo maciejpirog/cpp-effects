@@ -58,7 +58,7 @@ int product(const std::vector<int>& v)
   return OneShot::Handle<WithDefault<int>>(
     [&v]() {
       int r = 1;
-      for (auto i : v) { 
+      for (auto i : v) {
         if (i == 0) { error<void>(); }
         r *= i;
       }
