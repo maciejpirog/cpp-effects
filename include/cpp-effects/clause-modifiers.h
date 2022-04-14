@@ -65,7 +65,7 @@ private:
       // at this point: metastack = [a][b][c]; stored stack = [d][e][f][g.]
       OneShot::Metastack.splice(OneShot::Metastack.end(), storedMetastack);
       // at this point: metastack = [a][b][c][d][e][f][g.]
-      return std::move(a);
+      return a;
     } else {
       CommandClause(cmd);
       std::swap(storedMetastack.back()->fiber, OneShot::Metastack.back()->fiber);
