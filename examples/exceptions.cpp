@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "cpp-effects/cpp-effects.h"
-
+#include "cpp-effects/clause-modifiers.h"
 using namespace CppEffects;
 
 // ------------------------

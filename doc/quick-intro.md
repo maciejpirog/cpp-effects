@@ -119,9 +119,31 @@ template <typename Answer>
 static Answer Resumption<void, Answer>::Resume() &&;
 ```
 
-Resumptions in our library are one-shot, which means that you can resume each one at most once. This is not only a technical matter, but more importantly it is in accordance with RAII: objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the fact that `Resumption` is movabe, but not copyable. The handler is given the "ownership" of the resumption (the `Resumption` class is actually a form of a smart pointer), but if we want to resume, we need to give up the ownership of the resumption. After this, the resumption becomes invalid, and so the user should not use it again.
+Resumptions in our library are one-shot, which means that you can resume each one at most once. This is not only a technical matter, but more importantly it is in accordance with RAII: objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the fact that `Resumption` is movable, but not copyable. The handler is given the "ownership" of the resumption (the `Resumption` class is actually a form of a smart pointer), but if we want to resume, we need to give up the ownership of the resumption. After this, the resumption becomes invalid, and so the user should not use it again.
 
 ## Other features of the library
+
+### Invoking and handling with a label
+
+One can give a label to a handler and when invoking a command, which allows to pair a command with a handler more directly (otherwise, the pairing is done via runtime type information). This is a form of dynamic "instances" of effects. For example:
+
+```cppp
+void foo()
+{
+  int64_t lbl = OneShot::FreshLabel();
+  OneShot::Handle<SomeHandler>(lbl, []() {
+    OneShot::InvokeCmd(lbl, SomeCmd{});
+  });
+}
+```
+
+If one knows the exact type of the handler when invoking a command, they can supply it, which will make the invoke more efficient:
+
+```
+OneShot::StaticInvokeCmd<SomeHandler>(lbl, SomeCmd{});
+```
+
+### Other forms of handlers and clauses
 
 Our library offers additional forms of handlers and clauses, which lead to better readability and better performance. For example, `FlatHandler` implements handlers in which the return clause is identity, which is useful for polymorphic handlers in which the answer type can be `void`. Moreover, the respective clauses for `Put` and `Get` in the example above are self- and tail-resumptive, which means that they resume the same continuation that they obtain as an argument ("self-") and that they return the result of resuming ("tail-"). Such clauses can be simplified using the `Plain` modifier as follows:
 

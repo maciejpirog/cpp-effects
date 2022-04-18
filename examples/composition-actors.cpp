@@ -160,7 +160,7 @@ void ping()
 {
   auto pongPid = spawn(pong);
   for (int i = 1; i <= 10; i++) {
-    send<std::tuple<Pid, int>>(pongPid, {self(), std::move(i)});
+    send<std::tuple<Pid, int>>(pongPid, {self(), i});
     std::cout << "received: " << receive<int>() << std::endl;
   }
   send<std::tuple<Pid, int>>(pongPid, {self(), 0});

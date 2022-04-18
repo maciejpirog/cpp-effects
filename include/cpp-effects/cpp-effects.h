@@ -16,9 +16,8 @@
 
 #include <boost/context/fiber.hpp>
 
-// Different stack use policies:
+// For different stack use policies, e.g.,
 // #include <boost/context/protected_fixedsize_stack.hpp>
-// #include <boost_context_fixedsize_stack>
 
 #include <optional>
 #include <functional>
