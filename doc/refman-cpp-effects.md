@@ -327,7 +327,7 @@ virtual Answer ReturnClause(Body b); // if Body != void
 virtual Answer ReturnClause();       // if Body == void
 ```
 
-If a handled computation gives a result without invoking an operation, `ReturnClause` specifies the overall answer of the handler.
+If a handled computation gives a result without invoking a command, `ReturnClause` specifies the overall answer of the handler.
 
 - `Body b` - the value that is the result of the handled computation.
 
@@ -533,7 +533,7 @@ metastack: [0:N10CppEffects9MetaframeE][100:12ErrorHandler][200:12ErrorHandler][
 static int64_t FreshLabel();
 ```
 
-When a command is invoked, the handler is chosen based on the type of the operation using the usual "innermost" rule. However, one can use labels to directly match operations with handlers. The function `FreshLabel` generates a unique label, which can be used later with the overloads with `label` arguments.
+When a command is invoked, the handler is chosen based on the type of the command using the usual "innermost" rule. However, one can use labels to directly match commands with handlers. The function `FreshLabel` generates a unique label, which can be used later with the overloads with `label` arguments.
 
 - **Return value** `int64_t` - The generated label.
 
@@ -553,7 +553,7 @@ Create a new handler of type `H` and use it to handle the computation `body`.
 
 - `typename... Args` - Arguments supplied to the constructor of `H`.
 
-- `int64_t label` - Explicit label of the handler. If no label is given, this handler is used based on the types of the operations of `H` (the innermost handler that handles an invoked operation is used).
+- `int64_t label` - Explicit label of the handler. If no label is given, this handler is used based on the types of the commandss of `H` (the innermost handler that handles the invoked command is used).
 
 - `std::function<typename H::BodyType()> body` - The handled computation.
 
@@ -577,7 +577,7 @@ Hadle the computation `body` using the given handler of type `H`.
 
 - `typename H` - The type of the handler that is used to handle `body`.
 
-- `int64_t label` - Explicit label given to `handler`. If no label is given, this handler is used based on the types of the operations of `H` (the innermost handler that handles an invoked operation is used).
+- `int64_t label` - Explicit label given to `handler`. If no label is given, this handler is used based on the types of the commands of `H` (the innermost handler that handles the invoked command is used).
 
 - `std::function<typename H::BodyType()> body` - The handled computation.
 
@@ -599,7 +599,7 @@ Used in a handled computation to invoke a particular command. The current comput
 
 - `typename Cmd` - The type of the invoked command.
 
-- `int64_t label` - The label of the handler to which the control should go. If there is no handler with label `label` in the context or it does not handle the operation `Cmd`, the program ends with exit code `-1`.
+- `int64_t label` - The label of the handler to which the control should go. If there is no handler with label `label` in the context or it does not handle the command `Cmd`, the program ends with exit code `-1`.
 
 - `const Cmd& cmd` - The invoked command.
 
