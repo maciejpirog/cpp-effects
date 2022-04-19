@@ -430,7 +430,7 @@ handler to a computation, without the need to look up the handler on
 the stack every time we invoke [`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd) or
 [`OneShot::StaticInvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotstaticinvokecmd).
 
-Handler reference should not be confused with:
+A handler reference should not be confused with:
 
 - A reference to an object of a class that inherits from `Handler`,
   although it is not far from the truth: the stack of handler is a
@@ -439,13 +439,14 @@ Handler reference should not be confused with:
 
 - A label, since labels are not necessarily unique, and invoking a
   command with a label still involves looking up a handler with the
-  given label on teh stack.
+  given label on the stack.
 
 Handler references are stable under stack manipulation (such as
 invoking a new handler, or storing a handler in a resumption and then
 resuming that resumption), but are quite unsafe: invoking a command
-with a reference to a handler that has been popped from the metastack
-or moved to a resumption will cause undefined behaviour.
+with a reference to a handler that has been popped from the stack
+(which happens when a handled computation ends) or moved to a
+resumption will cause undefined behaviour.
 
 ## class `OneShot`
 
