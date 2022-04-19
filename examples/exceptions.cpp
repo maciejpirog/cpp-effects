@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "cpp-effects/cpp-effects.h"
-#include "cpp-effects/clause-modifiers.h"
+//#include "cpp-effects/clause-modifiers.h"
 using namespace CppEffects;
 
 // ------------------------
@@ -30,7 +30,7 @@ template <typename T>
 }
 
 template <typename T>
-class WithDefault : public Handler<T, T, Error> {
+class WithDefault : public FlatHandler<T, Error> {
 public:
   WithDefault(const T& t) : defaultVal(t) { }
 private:
@@ -38,10 +38,6 @@ private:
   T CommandClause(Error, Resumption<void, T>) override
   {
     return defaultVal;
-  }
-  T ReturnClause(T a) override
-  {
-    return a;
   }
 };
 
@@ -67,6 +63,28 @@ int product(const std::vector<int>& v)
     0); // the default value is 0
 }
 
+struct Ask : Command<int> { };
+struct AddOneMoreHandler : Command<void> { };
+
+template <typename T>
+class Reader : public FlatHandler<T, Ask, AddOneMoreHandler> {
+public:
+  Reader(int val) : val(val) { }
+private:
+  int val;
+  T CommandClause(Ask, Resumption<int, T> r) override
+  {
+    return std::move(r).Resume(val);
+  }
+  T CommandClause(AddOneMoreHandler, Resumption<void, T> r) override
+  {
+    return OneShot::Handle<Reader<void>>(300, [r = r.Release()](){
+      Resumption res(r);
+      std::move(res).Resume();
+    }, 300);
+  }
+};
+
 int main()
 {
   std::cout << product({1, 2, 3, 4, 5}) << std::flush << std::endl;
@@ -75,4 +93,22 @@ int main()
   // Output:
   // 120
   // 0
+
+  /*OneShot::Handle<Reader<void>>(100, []() {  OneShot::Handle<Reader<void>>(555, []() {
+    OneShot::DebugPrintMetastack();
+    auto x = OneShot::FindHandler(100);
+//OneShot::DebugPrintMetastack();
+   // std::cout << "label: " << (*x)->label << std::endl;
+//    OneShot::DebugPrintMetastack();
+    std::cout << OneShot::InvokeCmd(x, Ask{}) << std::endl;
+//    std::cout << OneShot::InvokeCmd(x, Ask{}) << std::endl;
+    OneShot::InvokeCmd(AddOneMoreHandler{});
+    OneShot::Handle<Reader<void>>([=]() {
+      OneShot::DebugPrintMetastack();
+      //std::cout << "label: " << (*x)->label << std::endl;
+      std::cout << OneShot::InvokeCmd(x, Ask{}) << std::endl;
+      //std::cout << OneShot::InvokeCmd(x, Ask{}) << std::endl;
+      return 0;
+    }, 200);
+  }, 555); }, 100);*/
 }

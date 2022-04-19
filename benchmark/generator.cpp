@@ -555,7 +555,7 @@ struct CmdYield : Command<void> {
 
 template <typename T>
 struct Yield {
-  std::list<MetaframePtr>::reverse_iterator it;
+  HandlerRef it;
   void operator()(const T& x) const
   {
     OneShot::StaticInvokeCmd<GeneratorHandler<T>>(it, CmdYield<T>{{}, x});
@@ -667,7 +667,7 @@ struct CmdYield : Command<void> {
 
 template <typename T>
 struct Yield {
-  std::list<MetaframePtr>::reverse_iterator it;
+  HandlerRef it;
   void operator()(const T& x) const
   {
     OneShot::StaticInvokeCmd<GeneratorHandler<T>>(it, CmdYield<T>{{}, x});

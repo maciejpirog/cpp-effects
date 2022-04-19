@@ -133,11 +133,11 @@ public:
   }
   explicit operator bool() const
   {
-    return data != nullptr && (bool)data->storedMetastack.front().fiber;
+    return data != nullptr && (bool)data->storedMetastack.back().fiber;
   }
   bool operator!() const
   {
-    return data == nullptr || !data->storedMetastack.front().fiber;
+    return data == nullptr || !data->storedMetastack.back().fiber;
   }
   ResumptionData<Out, Answer>* Release()
   {
@@ -191,11 +191,11 @@ public:
   }
   explicit operator bool() const
   {
-    return data != nullptr && (bool)data->storedMetastack.front().fiber;
+    return data != nullptr && (bool)data->storedMetastack.back().fiber;
   }
   bool operator!() const
   {
-    return data == nullptr || !data->storedMetastack.front().fiber;
+    return data == nullptr || !data->storedMetastack.back().fiber;
   }
   ResumptionData<void, Answer>* Release()
   {
@@ -236,7 +236,7 @@ public:
   }
 public:
   Metaframe() : label(0) { }
-protected:
+///protected:
   int64_t label;
 private:
   ctx::fiber fiber;
@@ -256,7 +256,7 @@ class CanInvokeCmdClause {
   friend class OneShot;
 protected:
   virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) = 0;
+    std::list<MetaframePtr>::iterator it, const Cmd& cmd) = 0;
 };
 
 // CmdClause is a class that allows us to define a handler with a
@@ -273,7 +273,7 @@ protected:
   virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
 private:
   virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd) final override;
+    std::list<MetaframePtr>::iterator it, const Cmd& cmd) final override;
   ResumptionData<typename Cmd::OutType, Answer> resumptionBuffer;
 };
 
@@ -349,7 +349,7 @@ struct TailAnswer {
 // popped from the metastack or moved to a resumption will cause
 // undefined behaviour.
 
-using HandlerRef = std::list<MetaframePtr>::reverse_iterator;
+using HandlerRef = std::list<MetaframePtr>::iterator;
 
 // ----------------------
 // Programmer's interface
@@ -399,9 +399,9 @@ public:
   static typename H::AnswerType HandleRef(int64_t label, std::function<typename H::BodyType(HandlerRef)> body, Args&&... args)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
-      return HandleWith(label, body, std::make_shared<H>(std::forward<Args>(args)...));
+      return HandleWithRef(label, body, std::make_shared<H>(std::forward<Args>(args)...));
     } else {
-      HandleWith(label, body, std::make_shared<H>(std::forward<Args>(args)...));
+      HandleWithRef(label, body, std::make_shared<H>(std::forward<Args>(args)...));
     }
   }
 
@@ -419,9 +419,9 @@ public:
   static typename H::AnswerType HandleRef(std::function<typename H::BodyType(HandlerRef)> body, Args&&... args)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
-      return Handle<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
+      return HandleRef<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
     } else {
-      Handle<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
+      HandleRef<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
     }
   }
 
@@ -436,18 +436,18 @@ public:
     // ctx::protected_fixedsize_stack pf(10000000);
     ctx::fiber bodyFiber{/*std::alocator_arg, std::move(pf),*/
         [&](ctx::fiber&& prev) -> ctx::fiber&& {
-      Metastack.back()->fiber = std::move(prev);
+      Metastack.front()->fiber = std::move(prev);
       handler->label = label;
-      Metastack.push_back(handler);
+      Metastack.push_front(handler);
 
       Tangible<Body> b(body);
 
-      MetaframePtr returnFrame(std::move(Metastack.back()));
-      Metastack.pop_back();
+      MetaframePtr returnFrame(std::move(Metastack.front()));
+      Metastack.pop_front();
 
-      std::move(Metastack.back()->fiber).resume_with([&](ctx::fiber&&) -> ctx::fiber {
+      std::move(Metastack.front()->fiber).resume_with([&](ctx::fiber&&) -> ctx::fiber {
         if constexpr (!std::is_void<Answer>::value) {
-          *(static_cast<std::optional<Answer>*>(Metastack.back()->returnBuffer)) =
+          *(static_cast<std::optional<Answer>*>(Metastack.front()->returnBuffer)) =
              std::static_pointer_cast<H>(returnFrame)->RunReturnClause(std::move(b));
         } else {
           std::static_pointer_cast<H>(returnFrame)->RunReturnClause(std::move(b));
@@ -462,8 +462,8 @@ public:
 
     if constexpr (!std::is_void<Answer>::value) {
       std::optional<Answer> answer;
-      void* prevBuffer = Metastack.back()->returnBuffer;
-      Metastack.back()->returnBuffer = &answer;
+      void* prevBuffer = Metastack.front()->returnBuffer;
+      Metastack.front()->returnBuffer = &answer;
       std::move(bodyFiber).resume();
 
       // Trampoline tail-resumes
@@ -473,7 +473,7 @@ public:
         tempTans.resumption->TailResume();
       }
 
-      Metastack.back()->returnBuffer = prevBuffer;
+      Metastack.front()->returnBuffer = prevBuffer;
       return std::move(*answer);
     } else {
       std::move(bodyFiber).resume();
@@ -491,7 +491,7 @@ public:
   static typename H::AnswerType HandleWithRef(
     int64_t label, std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler)
   {
-    return HandleWith(label, std::bind(body, Metastack.rbegin()), handler);
+    return HandleWith(label, std::bind(body, FindHandler(label)), handler); ///
   }
 
   template <typename H>
@@ -510,9 +510,9 @@ public:
     std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
-      return HandleWith(OneShot::FreshLabel(), body, std::move(handler));
+      return HandleWithRef(OneShot::FreshLabel(), body, std::move(handler));
     } else {
-      HandleWith(OneShot::FreshLabel(), body, handler);
+      HandleWithRef(OneShot::FreshLabel(), body, handler);
     }
   }
 
@@ -520,8 +520,8 @@ public:
   static HandlerRef FindHandler()
   {
     // Looking for handler based on the type of the command
-    for (auto it = Metastack.rbegin(); it != Metastack.rend(); ++it) {
-      if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
+    for (auto it = Metastack.begin(); it != Metastack.end(); ++it) {
+      if (std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
         return it;
       }
     }
@@ -532,8 +532,8 @@ public:
   static HandlerRef FindHandler(int64_t gotoHandler)
   {
     auto cond = [&](const MetaframePtr& mf) { return mf->label == gotoHandler; };
-    auto it = std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
-    if (it != Metastack.rend()) { return it; }
+    auto it = std::find_if(Metastack.begin(), Metastack.end(), cond);
+    if (it != Metastack.end()) { return it; }
     DebugPrintMetastack();
     exit(-1);
   }
@@ -552,9 +552,9 @@ public:
   {
     // Looking for handler based on its label
     auto cond = [&](const MetaframePtr& mf) { return mf->label == gotoHandler; };
-    auto it = std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
+    auto it = std::find_if(Metastack.begin(), Metastack.end(), cond);
     if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
-      return canInvoke->InvokeCmd(++it, cmd);
+      return canInvoke->InvokeCmd(std::next(it), cmd);
     }
     std::cerr << "error: handler with id " << gotoHandler
               << " does not handle " << typeid(Cmd).name() << std::endl;
@@ -566,9 +566,9 @@ public:
   static typename Cmd::OutType InvokeCmd(const Cmd& cmd)
   {
     // Looking for handler based on the type of the command
-    for (auto it = Metastack.rbegin(); it != Metastack.rend(); ++it) {
+    for (auto it = Metastack.begin(); it != Metastack.end(); ++it) {
       if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
-        return canInvoke->InvokeCmd(++it, cmd);
+        return canInvoke->InvokeCmd(std::next(it), cmd);
       }
     }
     DebugPrintMetastack();
@@ -579,7 +579,7 @@ public:
   static typename Cmd::OutType InvokeCmd(HandlerRef it, const Cmd& cmd)
   {
     if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
-      return canInvoke->InvokeCmd(++it, cmd);
+      return canInvoke->InvokeCmd(std::next(it), cmd);
     }
     std::cerr << "error: selected handler does not handle " << typeid(Cmd).name() << std::endl;
     DebugPrintMetastack();
@@ -590,9 +590,9 @@ public:
   static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd)
   {
     auto cond = [&](const MetaframePtr& mf) { return mf->label == gotoHandler; };
-    auto it = std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
-    if (it != Metastack.rend()) {
-      return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
+    auto it = std::find_if(Metastack.begin(), Metastack.end(), cond);
+    if (it != Metastack.end()) {
+      return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd);
     }
     std::cerr << "error: handler with id " << gotoHandler
               << " does not handle " << typeid(Cmd).name() << std::endl;
@@ -603,14 +603,14 @@ public:
   template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd)
   {
-    auto it = Metastack.rbegin();
-    return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
+    auto it = Metastack.begin();
+    return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd);
   }
 
   template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(HandlerRef it, const Cmd& cmd)
   {
-    return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
+    return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd);
   }
 }; // class OneShot
 
@@ -620,27 +620,26 @@ public:
 
 template <typename Answer, typename Cmd>
 typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
-  std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
+  std::list<MetaframePtr>::iterator it, const Cmd& cmd)
 {
   using Out = typename Cmd::OutType;
 
   // (continued from OneShot::InvokeCmd) ...looking for [d]
-  auto jt = it.base();
   ResumptionData<Out, Answer>& resumption = this->resumptionBuffer;
   resumption.storedMetastack.splice(
-    resumption.storedMetastack.begin(), OneShot::Metastack, jt, OneShot::Metastack.end());
+    resumption.storedMetastack.begin(), OneShot::Metastack, OneShot::Metastack.begin(), it);
   // at this point: [a][b][c]; stored stack = [d][e][f][g.] 
 
-  std::move(OneShot::Metastack.back()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
+  std::move(OneShot::Metastack.front()->fiber).resume_with([&](ctx::fiber&& prev) -> ctx::fiber {
     // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
-    resumption.storedMetastack.back()->fiber = std::move(prev);
+    resumption.storedMetastack.front()->fiber = std::move(prev);
     // at this point: [a][b][c.]; stored stack = [d][e][f][g]
 
     // Keep the handler alive for the duration of the command clause call
-    MetaframePtr _(resumption.storedMetastack.front());
+    MetaframePtr _(resumption.storedMetastack.back());
 
     if constexpr (!std::is_void<Answer>::value) {
-      *(static_cast<std::optional<Answer>*>(OneShot::Metastack.back()->returnBuffer)) =
+      *(static_cast<std::optional<Answer>*>(OneShot::Metastack.front()->returnBuffer)) =
         this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
     } else {
       this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
@@ -723,13 +722,13 @@ Answer ResumptionData<Out, Answer>::Resume()
 {
   if constexpr (!std::is_void<Answer>::value) {
     std::optional<Answer> answer;
-    void* prevBuffer = OneShot::Metastack.back()->returnBuffer;
-    OneShot::Metastack.back()->returnBuffer = &answer;
+    void* prevBuffer = OneShot::Metastack.front()->returnBuffer;
+    OneShot::Metastack.front()->returnBuffer = &answer;
 
-    std::move(this->storedMetastack.back()->fiber).resume_with(
+    std::move(this->storedMetastack.front()->fiber).resume_with(
         [&](ctx::fiber&& prev) -> ctx::fiber {
-      OneShot::Metastack.back()->fiber = std::move(prev);
-      OneShot::Metastack.splice(OneShot::Metastack.end(), this->storedMetastack);
+      OneShot::Metastack.front()->fiber = std::move(prev);
+      OneShot::Metastack.splice(OneShot::Metastack.begin(), this->storedMetastack);
       return ctx::fiber();
     });
 
@@ -740,13 +739,13 @@ Answer ResumptionData<Out, Answer>::Resume()
       tempTans.resumption->TailResume();
     }
 
-    OneShot::Metastack.back()->returnBuffer = prevBuffer;
+    OneShot::Metastack.front()->returnBuffer = prevBuffer;
     return std::move(*answer);
   } else {
-    std::move(this->storedMetastack.back()->fiber).resume_with(
+    std::move(this->storedMetastack.front()->fiber).resume_with(
         [&](ctx::fiber&& prev) -> ctx::fiber {
-      OneShot::Metastack.back()->fiber = std::move(prev);
-      OneShot::Metastack.splice(OneShot::Metastack.end(), this->storedMetastack);
+      OneShot::Metastack.front()->fiber = std::move(prev);
+      OneShot::Metastack.splice(OneShot::Metastack.begin(), this->storedMetastack);
       return ctx::fiber();
     });
 
@@ -762,10 +761,10 @@ Answer ResumptionData<Out, Answer>::Resume()
 template <typename Out, typename Answer>
 void ResumptionData<Out, Answer>::TailResume()
 {
-  std::move(this->storedMetastack.back()->fiber).resume_with(
+  std::move(this->storedMetastack.front()->fiber).resume_with(
       [&](ctx::fiber&& prev) -> ctx::fiber {
-    OneShot::Metastack.back()->fiber = std::move(prev);
-    OneShot::Metastack.splice(OneShot::Metastack.end(), this->storedMetastack);
+    OneShot::Metastack.front()->fiber = std::move(prev);
+    OneShot::Metastack.splice(OneShot::Metastack.begin(), this->storedMetastack);
     return ctx::fiber();
   });
 }
@@ -804,7 +803,7 @@ public:
   {
     if (OneShot::Metastack.empty()) {
       auto initMetaframe = std::make_shared<Metaframe>();
-      OneShot::Metastack.push_back(initMetaframe);
+      OneShot::Metastack.push_front(initMetaframe);
     }
   }  
 } inline initMetastack;
