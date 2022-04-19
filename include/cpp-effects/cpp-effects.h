@@ -226,17 +226,20 @@ class Metaframe {
   template <typename, typename> friend class CmdClause;
   friend class InitMetastack;
   template <typename, typename> friend class ResumptionData;
+  template <typename, typename, typename...> friend class Handler;
+  template <typename, typename...> friend class FlatHandler;
 public:
   virtual ~Metaframe() { }
   virtual void DebugPrint() const
   {
-    std::cout << "[" << label << ":" << typeid(*this).name();
-    if (!fiber) { std::cout << " (active)"; }
-    std::cout << "]";
+    //std::cout << "[" << label << ":" << typeid(*this).name();
+    //if (!fiber) { std::cout << " (active)"; }
+    //std::cout << "]";
+    std::cout << label << ":" << typeid(*this).name() << std::endl;
   }
 public:
   Metaframe() : label(0) { }
-///protected:
+protected:
   int64_t label;
 private:
   ctx::fiber fiber;
@@ -298,6 +301,12 @@ protected:
   virtual Answer ReturnClause(Body b) = 0;
 private:
   Answer RunReturnClause(Tangible<Body> b) { return ReturnClause(std::move(b.value)); }
+  virtual void DebugPrint() const override
+  {
+    std::cout << Metaframe::label << ":" << typeid(*this).name();
+    ((std::cout << "[" << typeid(Cmds).name() << "]"), ...);
+    std::cout << std::endl;
+  }
 };
 
 // We specialise for Body = void
@@ -314,6 +323,12 @@ protected:
   virtual Answer ReturnClause() = 0;
 private:
   Answer RunReturnClause(Tangible<void>) { return ReturnClause(); }
+  virtual void DebugPrint() const override
+  {
+    std::cout << Metaframe::label << ":" << typeid(*this).name();
+    ((std::cout << "[" << typeid(Cmds).name() << "]"), ...);
+    std::cout << std::endl;
+  }
 };
 
 // A handler without the return clause
@@ -380,9 +395,8 @@ public:
 
   static void DebugPrintMetastack()
   {
-    std::cerr << "metastack: ";
+    //std::cerr << "metastack: ";
     for (auto x : Metastack) { x->DebugPrint(); }
-    std::cerr << std::endl;
   }
 
   template <typename H, typename... Args>
@@ -491,7 +505,10 @@ public:
   static typename H::AnswerType HandleWithRef(
     int64_t label, std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler)
   {
-    return HandleWith(label, std::bind(body, FindHandler(label)), handler); ///
+    return HandleWith(label, [&](){
+      auto href = FindHandler(label);
+      return body(href);
+    }, std::move(handler));
   }
 
   template <typename H>
