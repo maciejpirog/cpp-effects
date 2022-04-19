@@ -123,11 +123,11 @@ Resumptions in our library are one-shot, which means that you can resume each on
 
 ## Other features of the library
 
-### Invoking and handling with a label
+### Invoking and handling with a label and reference
 
-One can give a label to a handler and when invoking a command, which allows to pair a command with a handler more directly (otherwise, the pairing is done via runtime type information). This is a form of dynamic "instances" of effects. For example:
+One can give a **label** to a handler and when invoking a command, which allows to pair a command with a handler more directly (otherwise, the pairing is done via runtime type information). This is a form of dynamic "instances" of effects. For example:
 
-```cppp
+```cpp
 void foo()
 {
   int64_t lbl = OneShot::FreshLabel();
@@ -139,9 +139,25 @@ void foo()
 
 If one knows the exact type of the handler when invoking a command, they can supply it, which will make the invoke more efficient:
 
-```
+```cpp
 OneShot::StaticInvokeCmd<SomeHandler>(lbl, SomeCmd{});
 ```
+
+A more efficient, albeit more dangerous, is to keep a **reference** to the handler, which will be valid as long as the handler is on the stack (even if it was moved around on the stack, or moved to a resumption and back on the stack).
+
+```cpp
+void foo()
+{
+  OneShot::HandleRef<SomeHandler>(lbl, [](auto href) {
+    OneShot::InvokeCmd(href, SomeCmd{});      // <---+
+    OneShot::Handle<SomeHandler>(lbl, []() {  //     |
+      OneShot::InvokeCmd(href, SomeCmd{});    // <---+
+    });                                       //     |
+  });                                         //     These two refer to
+}                                             //     the same handler
+```
+
+However, if the handler is not on the stack, the program might behave unpredictably with no warning.
 
 ### Other forms of handlers and clauses
 

@@ -57,12 +57,12 @@ We define the scheduler, which is a **handler** that can interpret the two comma
 ```cpp
 using Res = Resumption<void, void>;
 
-class Scheduler : public Handler<void, void, Yield, Fork> {
+class Scheduler : public FlatHandler<void, Yield, Fork> {
 public:
   static void Start(std::function<void()> f)
   {
     Run(f);
-    while (!queue.empty()) { // Round-robin scheduling
+    while (!queue.empty()) {  // Round-robin scheduling
       auto resumption = std::move(queue.front());
       queue.pop_front();
       std::move(resumption).Resume();
@@ -83,7 +83,6 @@ private:
     queue.push_back(std::move(r));
     queue.push_back({std::bind(Run, f.proc)});
   }
-  void ReturnClause() override { }
 };
 
 std::list<Res> Scheduler::queue;
@@ -119,9 +118,7 @@ int main()
 ## Technical summary
 
 - **Language:** C++17
-- **Handlers**: deep, one-shot, parametrised [1]
-
-[1] - In the library handlers are objects, so they can naturally contain any data, auxiliary functions, and additional programmer's interface.
+- **Handlers**: deep, one-shot, stateful
 
 ## Using in your project
 
