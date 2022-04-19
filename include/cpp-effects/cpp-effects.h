@@ -339,6 +339,18 @@ struct TailAnswer {
   ResumptionBase* resumption;
 };
 
+// ----------
+// HandlerRef
+// ----------
+
+// A reference to a live handler on the metastack. Handler references
+// are stable under stack manipulations, but are quite unsafe:
+// invoking a command with a reference to a handler that has been
+// popped from the metastack or moved to a resumption will cause
+// undefined behaviour.
+
+using HandlerRef = std::list<MetaframePtr>::reverse_iterator;
+
 // ----------------------
 // Programmer's interface
 // ----------------------
@@ -466,27 +478,26 @@ public:
     }
   }
 
-  static std::list<MetaframePtr>::reverse_iterator FindHandler(int64_t gotoHandler)
-  {
-    auto cond = [&](const MetaframePtr& mf) { return mf->label == gotoHandler; };
-    return std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
-  }
-
   template <typename Cmd>
-  static typename Cmd::OutType InvokeCmd(std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
+  static HandlerRef FindHandler()
   {
-    if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
-      return canInvoke->InvokeCmd(++it, cmd);
+    // Looking for handler based on the type of the command
+    for (auto it = Metastack.rbegin(); it != Metastack.rend(); ++it) {
+      if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
+        return it;
+      }
     }
-    std::cerr << "error: selected handler does not handle " << typeid(Cmd).name() << std::endl;
     DebugPrintMetastack();
     exit(-1);
   }
 
-  template <typename H, typename Cmd>
-  static typename Cmd::OutType StaticInvokeCmd(std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
+  static HandlerRef FindHandler(int64_t gotoHandler)
   {
-    return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
+    auto cond = [&](const MetaframePtr& mf) { return mf->label == gotoHandler; };
+    auto it = std::find_if(Metastack.rbegin(), Metastack.rend(), cond);
+    if (it != Metastack.rend()) { return it; }
+    DebugPrintMetastack();
+    exit(-1);
   }
 
   // In the InvokeCmd... methods we rely on the virtual method of the
@@ -526,6 +537,17 @@ public:
     exit(-1);
   }
 
+  template <typename Cmd>
+  static typename Cmd::OutType InvokeCmd(HandlerRef it, const Cmd& cmd)
+  {
+    if (auto canInvoke = std::dynamic_pointer_cast<CanInvokeCmdClause<Cmd>>(*it)) {
+      return canInvoke->InvokeCmd(++it, cmd);
+    }
+    std::cerr << "error: selected handler does not handle " << typeid(Cmd).name() << std::endl;
+    DebugPrintMetastack();
+    exit(-1);
+  }
+
   template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd)
   {
@@ -546,8 +568,18 @@ public:
     auto it = Metastack.rbegin();
     return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
   }
+
+  template <typename H, typename Cmd>
+  static typename Cmd::OutType StaticInvokeCmd(HandlerRef it, const Cmd& cmd)
+  {
+    return (static_cast<H*>(it->get()))->H::InvokeCmd(std::next(it), cmd); // circumvent vtable
+  }
 }; // class OneShot
 
+// ----------------------------------
+// Implementation of member functions
+// ----------------------------------
+o
 template <typename Answer, typename Cmd>
 typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
