@@ -579,7 +579,7 @@ public:
 // ----------------------------------
 // Implementation of member functions
 // ----------------------------------
-o
+
 template <typename Answer, typename Cmd>
 typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
   std::list<MetaframePtr>::reverse_iterator it, const Cmd& cmd)
