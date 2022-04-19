@@ -191,7 +191,7 @@ public:
   }
   explicit operator bool() const
   {
-    return data != nullptr && (bool)data->storedMetastack.front().fiber;;
+    return data != nullptr && (bool)data->storedMetastack.front().fiber;
   }
   bool operator!() const
   {

@@ -22,6 +22,8 @@ Because we used the `NoResume` modifier, the type of `CommandClause` for `MyCmd`
 
 ## `NoResume` modifier
 
+Specialisation for command clauses that do not use the resumption. This is useful for handlers that behave like exception handlers or terminate the "current thread".
+
 ```cpp
 template <typename Cmd>
 struct NoResume { };
@@ -32,8 +34,6 @@ protected:
   virtual Answer CommandClause(Cmd) = 0;
 };
 ```
-
-Specialisation for command clauses that do not use the resumption. This is useful for handlers that behave like exception handlers or terminate the "current thread".
 
 The command clause does not receive the current resumption, but it is allowed to resume any other resumption inside its body.
 
@@ -77,6 +77,8 @@ Bye!
 
 ## `Plain` modifier
 
+Specialisation for plain clauses, which interpret commands as functions (i.e., they are self- and tail-resumptive). No context switching, no explicit resumption.
+
 ```cpp
 template <typename Cmd>
 struct Plain { };
@@ -87,8 +89,6 @@ protected:
   virtual typename Cmd::OutType CommandClause(Cmd) = 0;
 };
 ```
-
-Specialisation for plain clauses, which interpret commands as functions (i.e., they are self- and tail-resumptive). No context switching, no allocation of resumption.
 
 Note that the return type of the command clause is now the return type of the command.
 
@@ -125,3 +125,31 @@ Output:
 
 </details>
 
+
+## `NoManage` modifier
+
+Specialisation for handlers that either:
+
+- Don't expose the resumption (i.e., all resumes happen within command
+  clauses),
+
+- Don't access the handler object after resume,
+
+which amounts to almost all practical use-cases of handlers. A
+`NoManage` clause does not participate in the reference-counting
+memory management of handlers, saving a tiny bit of performance.
+
+```cpp
+template <typename Cmd>
+struct NoManage { };
+
+template <typename Answer, typename Cmd>
+class CmdClause<Answer, NoManage<Cmd>> {
+protected:
+  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
+};
+```
+
+Not that the interface of `CommandClause` is exactly the same as in
+the usual command clause. `Plain` and `NoResume` clauses are
+automatically `NoManage`.

@@ -24,6 +24,8 @@
 
 :memo: [`cpp-effects/clause-modifiers.h`](refman-clause-modifiers.md) - Modifiers that force specific shapes of command clauses in handlers:
 
+- [`NoManage`](refman-clause-modifiers.md#nomanage-modifier) - Command clause that does not memory-manage the handler.
+
 - [`NoResume`](refman-clause-modifiers.md#noresume-modifier) - Command clause that does not use its resumptions.
 
 - [`Plain`](refman-clause-modifiers.md#plain-modifier) - Command clause that interprets a command as a function (i.e., a self- and tail-resumptive clause).
