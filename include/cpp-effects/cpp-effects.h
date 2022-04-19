@@ -396,7 +396,27 @@ public:
   }
 
   template <typename H, typename... Args>
+  static typename H::AnswerType HandleRef(int64_t label, std::function<typename H::BodyType(HandlerRef)> body, Args&&... args)
+  {
+    if constexpr (!std::is_void<typename H::AnswerType>::value) {
+      return HandleWith(label, body, std::make_shared<H>(std::forward<Args>(args)...));
+    } else {
+      HandleWith(label, body, std::make_shared<H>(std::forward<Args>(args)...));
+    }
+  }
+
+  template <typename H, typename... Args>
   static typename H::AnswerType Handle(std::function<typename H::BodyType()> body, Args&&... args)
+  {
+    if constexpr (!std::is_void<typename H::AnswerType>::value) {
+      return Handle<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
+    } else {
+      Handle<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
+    }
+  }
+
+  template <typename H, typename... Args>
+  static typename H::AnswerType HandleRef(std::function<typename H::BodyType(HandlerRef)> body, Args&&... args)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
       return Handle<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
@@ -468,8 +488,26 @@ public:
   }
 
   template <typename H>
+  static typename H::AnswerType HandleWithRef(
+    int64_t label, std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler)
+  {
+    return HandleWith(label, std::bind(body, Metastack.rbegin()), handler);
+  }
+
+  template <typename H>
   static typename H::AnswerType HandleWith(
     std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
+  {
+    if constexpr (!std::is_void<typename H::AnswerType>::value) {
+      return HandleWith(OneShot::FreshLabel(), body, std::move(handler));
+    } else {
+      HandleWith(OneShot::FreshLabel(), body, handler);
+    }
+  }
+
+  template <typename H>
+  static typename H::AnswerType HandleWithRef(
+    std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
       return HandleWith(OneShot::FreshLabel(), body, std::move(handler));

@@ -416,6 +416,37 @@ class Counter<void> : public Handler<void, Plain<Tick>> {
 
 </details>
 
+## class `HandlerRef`
+
+Abstract reference to an active handler.
+
+```cpp
+class HandlerRef { };
+```
+
+Active handlers are organised in a stack. A `HandlerRef` is a
+reference to a handler on this stack, which can be used to tie a
+handler to a computation, without the need to look up the handler on
+the stack every time we invoke [`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd) or
+[`OneShot::StaticInvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotstaticinvokecmd).
+
+Handler reference should not be confused with:
+
+- A reference to an object of a class that inherits from `Handler`,
+  although it is not far from the truth: the stack of handler is a
+  linked list of (pointers to) handlers, and `HandlerRef` is
+  implemented as a (reverse) iterator of that list,
+
+- A label, since labels are not necessarily unique, and invoking a
+  command with a label still involves looking up a handler with the
+  given label on teh stack.
+
+Handler references are stable under stack manipulation (such as
+invoking a new handler, or storing a handler in a resumption and then
+resuming that resumption), but are quite unsafe: invoking a command
+with a reference to a handler that has been popped from the metastack
+or moved to a resumption will cause undefined behaviour.
+
 ## class `OneShot`
 
 The interface to deal with handling and invoking commands.
@@ -425,15 +456,30 @@ class OneShot {
 public:
   OneShot() = delete;
   
+  // Auxiliary function useful for "printf" debugging:
+  
   static void DebugPrintMetastack();
   
+  // Generate a globally fresh label:
+  
   static int64_t FreshLabel();
+  
+  // Handle a computation:
   
   template <typename H, typename... Args>
   static typename H::AnswerType Handle(std::function<typename H::BodyType()> body, Args&&... args);
 
   template <typename H, typename... Args>
-  static typename H::AnswerType Handle(int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
+  static typename H::AnswerType Handle(
+    int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
+  
+  template <typename H, typename... Args>
+  static typename H::AnswerType HandleRef(
+    std::function<typename H::BodyType(HandlerRef)> body, Args&&... args);
+	
+  template <typename H, typename... Args>
+  static typename H::AnswerType HandleRef(
+    int64_t label, std::function<typename H::BodyType(HandlerRef)> body, Args&&... args);
   
   template <typename H>
   static typename H::AnswerType HandleWith(
@@ -443,17 +489,33 @@ public:
   static typename H::AnswerType HandleWith(
     int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 	
+  template <typename H>
+  static typename H::AnswerType HandleWithRef(
+    std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler);
+  
+  template <typename H>
+  static typename H::AnswerType HandleWithRef(
+    int64_t label, std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler);
+
+  // Invoke a command:
+	
   template <typename Cmd>
   static typename Cmd::OutType InvokeCmd(const Cmd& cmd);
   
   template <typename Cmd>
   static typename Cmd::OutType InvokeCmd(int64_t label, const Cmd& cmd);
   
+  template <typename Cmd>
+  static typename Cmd::OutType InvokeCmd(HandlerRef href, const Cmd& cmd);
+  
   template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd);
   
   template <typename H, typename Cmd>
   static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd);
+  
+  template <typename H, typename Cmd>
+  static typename Cmd::OutType StaticInvokeCmd(HandlerRef href, const Cmd& cmd);
 };
 ```
 
@@ -561,6 +623,18 @@ Create a new handler of type `H` and use it to handle the computation `body`.
 
 Note: `OneShot::Handle<H>(b)` is equivalent to `OneShot::Handle(b, std::make_sharede<H>())`.
 
+#### :large_orange_diamond: OneShot::HandleRef
+
+```cpp
+template <typename H, typename... Args>
+static typename H::AnswerType HandleRef(std::function<typename H::BodyType()> body, Args&&... args);
+  
+template <typename H, typename... Args>
+static typename H::AnswerType HandleRef(int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
+```
+
+Similar to `Handle`, with `body` that accepts an additional argument: a reference to the handler on the stack.
+
 #### :large_orange_diamond: OneShot::HandleWith
 
 ```cpp
@@ -573,7 +647,7 @@ Note: `OneShot::Handle<H>(b)` is equivalent to `OneShot::Handle(b, std::make_sha
     int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 ```
 
-Hadle the computation `body` using the given handler of type `H`.
+Handle the computation `body` using the given handler of type `H`.
 
 - `typename H` - The type of the handler that is used to handle `body`.
 
@@ -585,6 +659,20 @@ Hadle the computation `body` using the given handler of type `H`.
 
 - **Return value** `H::AnswerType` - The final answer of the handler, returned by one of the overloads of `H::CommandClause` or `H::ReturnClause`.
 
+#### :large_orange_diamond: OneShot::HandleWithRef
+
+```cpp
+  template <typename H>
+  static typename H::AnswerType HandleWithRef(
+    std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler);
+  
+  template <typename H>
+  static typename H::AnswerType HandleWithRef(
+    int64_t label, std::function<typename H::BodyType(HandlerRed)> body, std::shared_ptr<H> handler);
+```
+
+Similar to `HandleWith`, with `body` that accepts an additional argument: a reference to the handler on the stack.
+
 #### :large_orange_diamond: OneShot::InvokeCmd
 
 ```cpp
@@ -593,6 +681,9 @@ static typename Cmd::OutType InvokeCmd(const Cmd& cmd);
   
 template <typename Cmd>
 static typename Cmd::OutType InvokeCmd(int64_t label, const Cmd& cmd);
+
+template <typename Cmd>
+static typename Cmd::OutType InvokeCmd(HandlerRed, const Cmd& cmd);
 ```
 
 Used in a handled computation to invoke a particular command. The current computation (up  to and including the appropriate handler) is suspended, captured in a resumption, and the control goes to the handler.
@@ -600,6 +691,8 @@ Used in a handled computation to invoke a particular command. The current comput
 - `typename Cmd` - The type of the invoked command.
 
 - `int64_t label` - The label of the handler to which the control should go. If there is no handler with label `label` in the context or it does not handle the command `Cmd`, the program ends with exit code `-1`.
+
+- `HandlerRef href` - A reference to the handler to which the control should go. See the note at ``HandlerRef`.
 
 - `const Cmd& cmd` - The invoked command.
 
@@ -614,6 +707,9 @@ static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd);
   
 template <typename H, typename Cmd>
 static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd);
+
+template <typename H, typename Cmd>
+static typename Cmd::OutType StaticInvokeCmd(HandlerRef href, const Cmd& cmd);
 ```
 
 Used in a handled computation to invoke a particular command (similar to [`OneShot::InvokeCmd`](#large_orange_diamond-oneshotinvokecmd)), but the handler with the given label is statically cast to `H`. The current computation (up  to and including the appropriate handler) is suspended, captured in a resumption, and the control goes to the handler.
@@ -623,6 +719,8 @@ Used in a handled computation to invoke a particular command (similar to [`OneSh
 - `typename Cmd` - The type of the invoked command.
 
 - `int64_t label` - The label of the handler to which the control should go. If there is no handler with label `label`, the program exits with exit code `-1`. If the inner-most handler with label `label` is not of type (derived from) `H`, it results in undefined behaviour. If `label` is note supplied, the inner-most handler is used.
+
+- `HandlerRef href` - A reference to the handler to which the control should go. See the note at ``HandlerRef`.
 
 - `const Cmd& cmd` - The invoked command.
 
