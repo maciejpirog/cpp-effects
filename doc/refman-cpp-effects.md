@@ -424,29 +424,25 @@ Abstract reference to an active handler.
 class HandlerRef { };
 ```
 
-Active handlers are organised in a stack. A `HandlerRef` is a
-reference to a handler on this stack, which can be used to tie a
-handler to a computation, without the need to look up the handler on
-the stack every time we invoke [`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd) or
+A `HandlerRef` is an abstract reference to an active handler, which
+can be used to tie the handler to a command, without the need to look
+up the handler every time we invoke
+[`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd)
+or
 [`OneShot::StaticInvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotstaticinvokecmd).
+Handler references are valid if the referenced handler is
+active. Invoking a command with a reference to a handler of a
+computation that has already ended or is captured in a resumption will
+cause undefined behaviour.
 
 A handler reference should not be confused with:
 
 - A reference to an object of a class that inherits from `Handler`,
-  although it is not far from the truth: the stack of handler is a
-  linked list of (pointers to) handlers, and `HandlerRef` is
-  implemented as a (reverse) iterator of that list,
+  although it is not far from the truth: `HandlerRef` can be thought of 
 
 - A label, since labels are not necessarily unique, and invoking a
   command with a label still involves looking up a handler with the
   given label on the stack.
-
-Handler references are stable under stack manipulation (such as
-invoking a new handler, or storing a handler in a resumption and then
-resuming that resumption), but are quite unsafe: invoking a command
-with a reference to a handler that has been popped from the stack
-(which happens when a handled computation ends) or moved to a
-resumption will cause undefined behaviour.
 
 <details>
   <summary><strong>Example</strong></summary>
