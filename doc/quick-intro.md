@@ -148,13 +148,13 @@ A more efficient, albeit more dangerous, is to keep a **reference** to the handl
 ```cpp
 void foo()
 {
-  OneShot::HandleRef<SomeHandler>(lbl, [](auto href) {
-    OneShot::InvokeCmd(href, SomeCmd{});      // <---+
-    OneShot::Handle<SomeHandler>(lbl, []() {  //     |
-      OneShot::InvokeCmd(href, SomeCmd{});    // <---+
-    });                                       //     |
-  });                                         //     These two refer to
-}                                             //     the same handler
+  OneShot::HandleRef<SomeHandler>([](auto href) {
+    OneShot::InvokeCmd(href, SomeCmd{});    // <---+
+    OneShot::Handle<SomeHandler>([]() {     //     |
+      OneShot::InvokeCmd(href, SomeCmd{});  // <---+
+    });                                     //     |
+  });                                       //     These two refer to
+}                                           //     the same handler
 ```
 
 However, if the handler is not on the stack, the program might behave unpredictably with no warning.
