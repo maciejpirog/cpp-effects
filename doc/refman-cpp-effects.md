@@ -438,7 +438,9 @@ cause undefined behaviour.
 A handler reference should not be confused with:
 
 - A reference to an object of a class that inherits from `Handler`,
-  although it is not far from the truth: `HandlerRef` can be thought of 
+  although it is not far from the truth: `HandlerRef` can be thought
+  of as a form of an iterator that points to an object, not a
+  reference to the object itself.
 
 - A label, since labels are not necessarily unique, and invoking a
   command with a label still involves looking up a handler with the
