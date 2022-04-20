@@ -697,7 +697,7 @@ template <typename H, typename... Args>
 static typename H::AnswerType HandleRef(int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
 ```
 
-Similar to `Handle`, with `body` that accepts an additional argument: a reference to the handler on the stack.
+Similar to `Handle`, with `body` that accepts an additional argument: a reference to the handler. See the documentation for [`HandlerRef`](refman-cpp-effects.md#class-handlerref).
 
 #### :large_orange_diamond: OneShot::HandleWith
 
@@ -735,7 +735,7 @@ Handle the computation `body` using the given handler of type `H`.
     int64_t label, std::function<typename H::BodyType(HandlerRed)> body, std::shared_ptr<H> handler);
 ```
 
-Similar to `HandleWith`, with `body` that accepts an additional argument: a reference to the handler on the stack.
+Similar to `HandleWith`, with `body` that accepts an additional argument: a reference to the handler. See the documentation for [`HandlerRef`](refman-cpp-effects.md#class-handlerref).
 
 #### :large_orange_diamond: OneShot::InvokeCmd
 
@@ -756,7 +756,7 @@ Used in a handled computation to invoke a particular command. The current comput
 
 - `int64_t label` - The label of the handler to which the control should go. If there is no handler with label `label` in the context or it does not handle the command `Cmd`, the program ends with exit code `-1`.
 
-- `HandlerRef href` - A reference to the handler to which the control should go. See the note at ``HandlerRef`.
+- `HandlerRef href` - A reference to the handler to which the control should go. See the documentation for [`HandlerRef`](refman-cpp-effects.md#class-handlerref).
 
 - `const Cmd& cmd` - The invoked command.
 
@@ -784,7 +784,7 @@ Used in a handled computation to invoke a particular command (similar to [`OneSh
 
 - `int64_t label` - The label of the handler to which the control should go. If there is no handler with label `label`, the program exits with exit code `-1`. If the inner-most handler with label `label` is not of type (derived from) `H`, it results in undefined behaviour. If `label` is note supplied, the inner-most handler is used.
 
-- `HandlerRef href` - A reference to the handler to which the control should go. See the note at ``HandlerRef`.
+- `HandlerRef href` - A reference to the handler to which the control should go. See the documentation for [`HandlerRef`](refman-cpp-effects.md#class-handlerref).
 
 - `const Cmd& cmd` - The invoked command.
 
