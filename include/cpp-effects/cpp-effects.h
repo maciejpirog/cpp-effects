@@ -19,14 +19,11 @@
 // For different stack use policies, e.g.,
 // #include <boost/context/protected_fixedsize_stack.hpp>
 
-#include <optional>
 #include <functional>
-#include <iostream> // for debugging only
+#include <iostream>
 #include <list>
-#include <vector>
-#include <tuple>
+#include <optional>
 #include <typeinfo>
-#include <typeindex>
 
 namespace CppEffects {
 
