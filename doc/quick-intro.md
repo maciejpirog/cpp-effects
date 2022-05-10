@@ -93,7 +93,10 @@ FP usually makes effect handlers syntactically quite similar to exception handle
 We can handle a computation as follows:
 
 ```cpp
-auto body = []() -> int { return get(put(get() * 2)); };
+auto body = []() -> int {
+  put(get() * 2);
+  return get();
+};
 OneShot::Handle<State<int>>(body, 10); // returns 20
 ```
 
