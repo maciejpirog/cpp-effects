@@ -1,3 +1,9 @@
+// C++ Effects library
+// Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
+// License: MIT
+
+// Example: Erlang-style actors obtained by coposition of threads and mutable state
+
 #include <iostream>
 #include <any>
 #include <queue>
@@ -160,8 +166,10 @@ void ping()
 {
   auto pongPid = spawn(pong);
   for (int i = 1; i <= 10; i++) {
+    std::cout << "sent: " << i << ", ";
     send<std::tuple<Pid, int>>(pongPid, {self(), i});
-    std::cout << "received: " << receive<int>() << std::endl;
+    int response = receive<int>();
+    std::cout << "received: " << response << std::endl;
   }
   send<std::tuple<Pid, int>>(pongPid, {self(), 0});
 }
@@ -169,4 +177,16 @@ void ping()
 int main()
 {
   Scheduler::Start(std::bind(spawn, ping));
+
+  // Output:
+  // sent: 1, received: 1
+  // sent: 2, received: 2
+  // sent: 3, received: 3
+  // sent: 4, received: 4
+  // sent: 5, received: 5
+  // sent: 6, received: 6
+  // sent: 7, received: 7
+  // sent: 8, received: 8
+  // sent: 9, received: 9
+  // sent: 10, received: 10
 }
