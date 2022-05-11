@@ -592,7 +592,7 @@ where
 
 - `type_name` is the `typeid()::name` of the handler class,
 
-- `[cmd]` is the lit of `typeid()::name`-s of the commads handled by the handler.
+- `[cmd]` is the list of `typeid()::name`s of the commads handled by the handler.
 
 The stack grows bottom-to-top, while the bottom frame is always a dummy "global" handler with label `0`.
 
