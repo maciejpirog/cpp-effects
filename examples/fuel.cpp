@@ -2,7 +2,8 @@
 // Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
 // License: MIT
 
-// Example: Bound execution of a computation
+// Example: We control execution of a computation by limiting the
+// amount of "fuel" it can use.
 
 #include <functional>
 #include <iostream>

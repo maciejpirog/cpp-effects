@@ -2,9 +2,10 @@
 // Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
 // License: MIT
 
-// Example: Erlang-inspired message-passing actors with local round-robin scheduler
+// Example: Message-passing actors. Each actor is defined as a class
+// (Compare also with the "composition-actors" example)
 
-// Todo: This example still requires some thought on memory management
+// TODO: This example still requires some thought on memory management
 
 #include <functional>
 #include <iostream>
