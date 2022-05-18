@@ -9,7 +9,7 @@ include_directories ("include")
 
 message (STATUS compiler:  ${CMAKE_C_COMPILER})
 set (CMAKE_CXX_STANDARD 17)
-add_compile_options (-Wall -Wextra -pedantic -Werror -O0)
+add_compile_options (-Wall -Wextra -pedantic -Werror -O3)
 
 # For local boost:
 # set (BOOST_ROOT <boost-directory>)
