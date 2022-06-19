@@ -556,11 +556,11 @@ public:
   
   template <typename H, typename... Args>
   static Resumption<void, typename H::AnswerType> Wrap(
-    std::function<typename H::BodyType()> body, Args&&... args)
+    std::function<typename H::BodyType()> body, Args&&... args);
 
   template <typename H, typename A, typename... Args>
   static Resumption<void, typename H::AnswerType> Wrap(
-    std::function<typename H::BodyType(A)> body, Args&&... args)
+    std::function<typename H::BodyType(A)> body, Args&&... args);
   
   template <typename H, typename... Args>
   static Resumption<void, typename H::AnswerType> Wrap(
@@ -572,11 +572,11 @@ public:
 	
   template <typename H>
   static Resumption<void, typename H::AnswerType> WrapWith(
-    std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
+    std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 
   template <typename H, typename A>
   static Resumption<void, typename H::AnswerType> WrapWith(
-    std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler)
+    std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler);
   
   template <typename H>
   static Resumption<void, typename H::AnswerType> WrapWith(
