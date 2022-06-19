@@ -406,6 +406,24 @@ public:
   }
 
   template <typename H, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    int64_t label, std::function<typename H::BodyType()> body, Args&&... args)
+  {
+    return Resumption<void, typename H::AnswerType>([=](){
+      return OneShot::Handle<H>(label, body, std::forward<Args>(args)...);
+    });
+  }
+
+  template <typename H, typename A, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    int64_t label, std::function<typename H::BodyType(A)> body, Args&&... args)
+  {
+    return Resumption<void, typename H::AnswerType>([=](A a){
+      return OneShot::Handle<H>(label, std::bind(body, a), std::forward<Args>(args)...);
+    });
+  }
+
+  template <typename H, typename... Args>
   static typename H::AnswerType HandleRef(int64_t label, std::function<typename H::BodyType(HandlerRef)> body, Args&&... args)
   {
     if constexpr (!std::is_void<typename H::AnswerType>::value) {
@@ -423,6 +441,24 @@ public:
     } else {
       Handle<H>(OneShot::FreshLabel(), body, std::forward<Args>(args)...);
     }
+  }
+
+  template <typename H, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    std::function<typename H::BodyType()> body, Args&&... args)
+  {
+    return Resumption<void, typename H::AnswerType>([=](){
+      return OneShot::Handle<H>(body, std::forward<Args>(args)...);
+    });
+  }
+
+  template <typename H, typename A, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    std::function<typename H::BodyType(A)> body, Args&&... args)
+  {
+    return Resumption<void, typename H::AnswerType>([=](A a){
+      return OneShot::Handle<H>(std::bind(body, a), std::forward<Args>(args)...);
+    });
   }
 
   template <typename H, typename... Args>
@@ -498,6 +534,24 @@ public:
   }
 
   template <typename H>
+  static Resumption<void, typename H::AnswerType> WrapWith(
+    int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
+  {
+    return Resumption<void, typename H::AnswerType>([=](){
+      return OneShot::HandleWith<H>(label, body, handler);
+    });
+  }
+
+  template <typename H, typename A>
+  static Resumption<void, typename H::AnswerType> WrapWith(
+    int64_t label, std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler)
+  {
+    return Resumption<void, typename H::AnswerType>([=](A a){
+      return OneShot::HandleWith<H>(label, std::bind(body, a), handler);
+    });
+  }
+
+  template <typename H>
   static typename H::AnswerType HandleWithRef(
     int64_t label, std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler)
   {
@@ -516,6 +570,24 @@ public:
     } else {
       HandleWith(OneShot::FreshLabel(), body, handler);
     }
+  }
+
+  template <typename H>
+  static Resumption<void, typename H::AnswerType> WrapWith(
+    std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
+  {
+    return Resumption<void, typename H::AnswerType>([=](){
+      return OneShot::HandleWith<H>(body, handler);
+    });
+  }
+
+  template <typename H, typename A>
+  static Resumption<void, typename H::AnswerType> WrapWith(
+    std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler)
+  {
+    return Resumption<void, typename H::AnswerType>([=](A a){
+      return OneShot::HandleWith<H>(std::bind(body, a), handler);
+    });
   }
 
   template <typename H>

@@ -551,6 +551,40 @@ public:
   template <typename H>
   static typename H::AnswerType HandleWithRef(
     int64_t label, std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler);
+	
+  // Wrap a computation in a handler, but don't execute it. Instead, return a resumption.
+  
+  template <typename H, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    std::function<typename H::BodyType()> body, Args&&... args)
+
+  template <typename H, typename A, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    std::function<typename H::BodyType(A)> body, Args&&... args)
+  
+  template <typename H, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
+
+  template <typename H, typename A, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    int64_t label, std::function<typename H::BodyType(A)> body, Args&&... args);
+	
+  template <typename H>
+  static Resumption<void, typename H::AnswerType> WrapWith(
+    std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
+
+  template <typename H, typename A>
+  static Resumption<void, typename H::AnswerType> WrapWith(
+    std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler)
+  
+  template <typename H>
+  static Resumption<void, typename H::AnswerType> WrapWith(
+    int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
+
+  template <typename H, typename A>
+  static Resumption<void, typename H::AnswerType> WrapWith(
+    int64_t label, std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler);
 
   // Invoke a command:
 	
@@ -702,13 +736,13 @@ Similar to `Handle`, with `body` that accepts an additional argument: a referenc
 #### :large_orange_diamond: OneShot::HandleWith
 
 ```cpp
-  template <typename H>
-  static typename H::AnswerType HandleWith(
-    std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
+template <typename H>
+static typename H::AnswerType HandleWith(
+  std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
   
-  template <typename H>
-  static typename H::AnswerType HandleWith(
-    int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
+template <typename H>
+static typename H::AnswerType HandleWith(
+  int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 ```
 
 Handle the computation `body` using the given handler of type `H`.
@@ -726,16 +760,84 @@ Handle the computation `body` using the given handler of type `H`.
 #### :large_orange_diamond: OneShot::HandleWithRef
 
 ```cpp
-  template <typename H>
-  static typename H::AnswerType HandleWithRef(
-    std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler);
+template <typename H>
+static typename H::AnswerType HandleWithRef(
+  std::function<typename H::BodyType(HandlerRef)> body, std::shared_ptr<H> handler);
   
-  template <typename H>
-  static typename H::AnswerType HandleWithRef(
-    int64_t label, std::function<typename H::BodyType(HandlerRed)> body, std::shared_ptr<H> handler);
+template <typename H>
+static typename H::AnswerType HandleWithRef(
+  int64_t label, std::function<typename H::BodyType(HandlerRed)> body, std::shared_ptr<H> handler);
 ```
 
 Similar to `HandleWith`, with `body` that accepts an additional argument: a reference to the handler. See the documentation for [`HandlerRef`](refman-cpp-effects.md#class-handlerref).
+
+#### :large_orange_diamond: OneShot::Wrap
+
+Wraps a computation in a handler, but doesn't execute it. Instead, the computation together with a handler are returned as a suspended computation (= resumption).
+
+```cpp
+  template <typename H, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    std::function<typename H::BodyType()> body, Args&&... args)
+
+  template <typename H, typename A, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    std::function<typename H::BodyType(A)> body, Args&&... args)
+  
+  template <typename H, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
+
+  template <typename H, typename A, typename... Args>
+  static Resumption<void, typename H::AnswerType> Wrap(
+    int64_t label, std::function<typename H::BodyType(A)> body, Args&&... args);
+```
+
+Semantically, for a function `std::function<T()> foo`, the expression
+
+```cpp
+OneShot::Wrap<H>(foo)
+```
+
+is equivalent to
+
+```cpp
+Resumption<void, T>([=](){ return OneShot::Handle<H>(foo); })
+```
+
+If the function has an argument, it becomes the `Out` type of the resumption. That is, for a function `std::function<T(A)> foo`, the expression
+
+```cpp
+OneShot::Wrap<H>(foo)
+```
+
+is equivalent to
+
+```cpp
+Resumption<A, T>([=](A a){ return OneShot::Handle<H>(std::bind(foo, a)); })
+```
+
+#### :large_orange_diamond: OneShot::WrapWith
+
+Version of `OneShot::Wrap` with a specified handler object.
+
+```cpp
+template <typename H>
+static Resumption<void, typename H::AnswerType> WrapWith(
+  std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
+
+template <typename H, typename A>
+static Resumption<void, typename H::AnswerType> WrapWith(
+  std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler)
+  
+template <typename H>
+static Resumption<void, typename H::AnswerType> WrapWith(
+  int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
+
+template <typename H, typename A>
+static Resumption<void, typename H::AnswerType> WrapWith(
+  int64_t label, std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler);
+```
 
 #### :large_orange_diamond: OneShot::InvokeCmd
 

@@ -57,12 +57,14 @@ We define the scheduler, which is a **handler** that can interpret the two comma
 ```cpp
 using Res = Resumption<void, void>;
 
-class Scheduler : public FlatHandler<void, Yield, Fork> {
+class Scheduler : public Handler<void, void, Yield, Fork, Kill> {
 public:
   static void Start(std::function<void()> f)
   {
-    Run(f);
-    while (!queue.empty()) {  // Round-robin scheduling
+    queue.push_back(OneShot::Wrap<Scheduler>(f));  // Create the first thread by wrapping
+	                                               // the body in a handler
+												   
+    while (!queue.empty()) {                       // Round-robin scheduling
       auto resumption = std::move(queue.front());
       queue.pop_front();
       std::move(resumption).Resume();
@@ -70,10 +72,6 @@ public:
   }
 private:
   static std::list<Res> queue;
-  static void Run(std::function<void()> f)
-  {
-    OneShot::Handle<Scheduler>(f);
-  }
   void CommandClause(Yield, Res r) override
   {
     queue.push_back(std::move(r));
@@ -81,8 +79,10 @@ private:
   void CommandClause(Fork f, Res r) override
   {
     queue.push_back(std::move(r));
-    queue.push_back({std::bind(Run, f.proc)});
+    queue.push_back(OneShot::Wrap<Scheduler>(f.proc));
   }
+  void CommandClause(Kill, Res) override { }
+  void ReturnClause() override { }
 };
 
 std::list<Res> Scheduler::queue;
