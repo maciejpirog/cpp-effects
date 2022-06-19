@@ -85,7 +85,7 @@ The `Resumption` class is actually a form of a smart pointer, so moving it aroun
 - `typename Answer` - The return type of the suspended computation (i.e., the return type of `Resumption<Out, Answer>::Resume`).
 
 
-#### :large_orange_diamond: Resumption<Out, Answer>::Resumption()
+#### :large_orange_diamond: Resumption<Out, Answer>::Resumption
 
 ```cpp
 /* 1 */ Resumption<Out, Answer>::Resumption()

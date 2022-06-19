@@ -392,8 +392,7 @@ public:
 
   static void DebugPrintMetastack()
   {
-    //std::cerr << "metastack: ";
-    for (auto x : Metastack) { x->DebugPrint(); }
+    for (auto frame : Metastack) { frame->DebugPrint(); }
   }
 
   template <typename H, typename... Args>
