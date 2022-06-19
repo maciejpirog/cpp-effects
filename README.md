@@ -57,7 +57,7 @@ We define the scheduler, which is a **handler** that can interpret the two comma
 ```cpp
 using Res = Resumption<void, void>;
 
-class Scheduler : public FlatHandler<void, Yield, Fork,> {
+class Scheduler : public FlatHandler<void, Yield, Fork> {
 public:
   static void Start(std::function<void()> f)
   {
