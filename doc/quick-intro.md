@@ -11,7 +11,7 @@ Effect handlers first appeared in the area of functional programming (e.g., Eff,
 In our library, *commands* (often known as *operations*) are defined as classes derived from the `Command` template. The type argument of the template is the return type of the command. For example, we can formulate the usual interface for mutable state of type `int` as follows:
 
 ```cpp
-struct Put : Command<void> { int newState; };
+struct Put : Command<> { int newState; };
 struct Get : Command<int> { };
 ```
 
@@ -20,7 +20,7 @@ Data members of these classes are arguments of the commands.
 :point_right: There is nothing magical in `Command`. It is defined as follows:
 
 ```cpp
-template <typename Out>
+template <typename Out = void>
 struct Command {
   using OutType = Out;
 };

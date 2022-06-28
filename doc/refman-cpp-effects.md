@@ -9,13 +9,21 @@ This header contains the basic classes used in the library.
 The base class for commands.
 
 ```cpp
+template <typename... Outs>
+struct Command;
+
 template <typename Out>
-struct Command {
+struct Command<Out> {
   using OutType = Out;
+};
+
+template <>
+struct Command<> {
+  using OutType = void;
 };
 ```
 
-- `typename Out` - The return type when invoking the (derived) command (i.e., the return type of [`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd)). Should be at least move-constructible and move-assignable.
+- `typename... Outs` - The return type(s) of invoking the (derived) command (i.e., the return type of [`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd)). Should be at least move-constructible and move-assignable.
 
 **NOTE:** A class derived from `Command` can be used as a command if it is at least copy-constructible.
 
@@ -451,7 +459,7 @@ A handler reference should not be confused with:
   
 ```cpp
 struct Ask : Command<int> { };
-struct AddOneMoreHandler : Command<void> { };
+struct AddOneMoreHandler : Command<> { };
 
 template <typename T>
 class Reader : public FlatHandler<T, Ask, AddOneMoreHandler> {
@@ -634,14 +642,14 @@ The stack grows bottom-to-top, while the bottom frame is always a dummy "global"
   <summary><strong>Example</strong></summary>
 
 ```cpp
-struct Error : Command<void> { };
+struct Error : Command<> { };
 
 class ErrorHandler : public FlatHandler<void, NoResume<Error>> {
   void CommandClause(Error) override { }
 };
 
 template <typename S>
-struct Put : Command<void> {
+struct Put : Command<> {
   S newState;
 };
 

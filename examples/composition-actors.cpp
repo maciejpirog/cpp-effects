@@ -19,7 +19,7 @@ using namespace CppEffects;
 // -------------
 
 template <typename S>
-struct Put : Command<void> {
+struct Put : Command<> {
   S newState;
 };
 
@@ -56,13 +56,13 @@ private:
 // Lightweight threads
 // -------------------
 
-struct Yield : Command<void> { };
+struct Yield : Command<> { };
 
-struct Fork : Command<void> {
+struct Fork : Command<> {
   std::function<void()> proc;
 };
 
-struct Kill : Command<void> { };
+struct Kill : Command<> { };
 
 void yield()
 {

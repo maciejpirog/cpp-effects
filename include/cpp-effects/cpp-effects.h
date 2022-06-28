@@ -61,10 +61,19 @@ using MetaframePtr = std::shared_ptr<Metaframe>;
 // Commands
 // --------
 
+template <typename... Outs>
+struct Command;
+
 template <typename Out>
-struct Command {
+struct Command<Out> {
   using OutType = Out;
 };
+
+template <>
+struct Command<> {
+  using OutType = void;
+};
+
 
 // -----------
 // Resumptions

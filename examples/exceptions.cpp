@@ -20,7 +20,7 @@ using namespace CppEffects;
 // handler, which handles an exception by returning a value specified
 // in the constructor.
 
-struct Error : Command<void> { };
+struct Error : Command<> { };
 
 template <typename T>
 [[noreturn]] T error()

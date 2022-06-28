@@ -8,7 +8,7 @@ Each modifier consists of a template, which marks a command in the type of the h
 
 ```cpp
 struct MyCmd : Command<int> { };
-struct OtherCmd : Command<void> { };
+struct OtherCmd : Command<> { };
 
 class MyHandler : public Handler <char, void, NoResume<MyCmd>, OtherCmd> {
   ...
@@ -41,7 +41,7 @@ The command clause does not receive the current resumption, but it is allowed to
   <summary><strong>Example</strong></summary>
 
 ```cpp
-struct Error : Command<void> { };
+struct Error : Command<> { };
 
 class Cancel : public Handler<void, void, NoResume<Error>> {
   void CommandClause(Error) override // no "resumption" argument

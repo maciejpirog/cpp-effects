@@ -21,7 +21,7 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct Yield : Command<void> {
+struct Yield : Command<> {
   T value;
 };
 

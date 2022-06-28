@@ -29,11 +29,11 @@ struct Assign : AssignBase {
   virtual ~Assign() { }
 };
 
-struct AssignCmd : Command<void> {
+struct AssignCmd : Command<> {
   AssignBase* asg;
 };
 
-struct Rollback : Command<void> { };
+struct Rollback : Command<> { };
 
 // ----------------------
 // Programmer's interface

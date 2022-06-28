@@ -38,9 +38,9 @@ private:
   std::optional<T> value;
 };
 
-struct Yield : Command<void> { };
+struct Yield : Command<> { };
 
-struct Await : Command<void> {
+struct Await : Command<> {
   GenericFuture* future;
 };
 

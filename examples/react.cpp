@@ -42,16 +42,16 @@ namespace chrono = std::chrono;
 
 using TimePoint = chrono::time_point<std::chrono::system_clock>;
 
-struct Sleep : Command<void> {
+struct Sleep : Command<> {
   const chrono::milliseconds time;
 };
 
-struct Fork : Command<void> {
+struct Fork : Command<> {
   std::function<void()> proc;
   bool background = false;
 };
 
-struct Kill : Command<void> { };
+struct Kill : Command<> { };
 
 void yield()
 {

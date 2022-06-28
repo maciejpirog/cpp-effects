@@ -35,9 +35,9 @@ To implement this interface, we first define two **commands**, which are data st
 #include "cpp-effects/cpp-effects.h"
 using namespace CppEffects;
 
-struct Yield : Command<void> { };
+struct Yield : Command<> { };
 
-struct Fork : Command<void> {
+struct Fork : Command<> {
   std::function<void()> proc;
 };
 

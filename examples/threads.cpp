@@ -20,13 +20,13 @@ using namespace CppEffects;
 // Effect intarface for lightweight threads
 // ----------------------------------------
 
-struct Yield : Command<void> { };
+struct Yield : Command<> { };
 
-struct Fork : Command<void> {
+struct Fork : Command<> {
   std::function<void()> proc;
 };
 
-struct Kill : Command<void> { };
+struct Kill : Command<> { };
 
 void yield()
 {

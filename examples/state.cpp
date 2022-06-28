@@ -40,7 +40,7 @@ using namespace CppEffects;
 // -----------------------------------
 
 template <typename S>
-struct Put : Command<void> {
+struct Put : Command<> {
   S newState;
 };
 
@@ -187,7 +187,7 @@ struct CmdAid : Command<Bottom> {
 };
 
 template <typename H>
-struct CmdAbet : Command<void> {
+struct CmdAbet : Command<> {
   std::shared_ptr<H> han;
 };
 

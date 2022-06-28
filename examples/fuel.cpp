@@ -21,7 +21,7 @@ using namespace CppEffects;
 // By invoking this operation, a computation "consumes" a given amount
 // of fuel
 
-struct Consume : Command<void> {
+struct Consume : Command<> {
   int64_t amount;
 };
 

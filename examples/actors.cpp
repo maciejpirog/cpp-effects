@@ -88,9 +88,9 @@ struct ActorInfo {
   Res actorResumption;
 };
 
-struct CmdYield : Command<void> { };
+struct CmdYield : Command<> { };
 
-struct CmdFork : Command<void> {
+struct CmdFork : Command<> {
   ActorBase* actor;
 };
 
