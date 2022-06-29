@@ -141,7 +141,7 @@ class CmdClause<Answer, NoManage<Cmd>> : public CanInvokeCmdClause<Cmd> {
   friend class OneShot;
   template <typename, typename, typename...> friend class Handler;
 protected:
-  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
+  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::template ResumptionType<Answer>>) = 0;
 private:
   virtual typename Cmd::OutType InvokeCmd(
     std::list<MetaframePtr>::iterator it, const Cmd& cmd) final override
@@ -165,9 +165,9 @@ private:
 
       if constexpr (!std::is_void<Answer>::value) {
         *(static_cast<std::optional<Answer>*>(OneShot::Metastack.front()->returnBuffer)) =
-          this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
+          this->CommandClause(cmd, Resumption<typename Cmd::template ResumptionType<Answer>>(resumption));
       } else {
-        this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
+        this->CommandClause(cmd, Resumption<typename Cmd::template ResumptionType<Answer>>(resumption));
       }
       return ctx::fiber();
     });

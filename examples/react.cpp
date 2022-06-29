@@ -73,7 +73,7 @@ void kill()
   OneShot::InvokeCmd(Kill{});
 }
 
-using Res = Resumption<void, void>;
+using Res = Resumption<void()>;
 
 using INT = int;
 

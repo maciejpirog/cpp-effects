@@ -35,7 +35,7 @@ struct Cmd : Command<int> { };
 // ------------------------------------------------------------------
 
 class TestAnswerType : public Handler<XTCC, int, Cmd> {
-  XTCC CommandClause(Cmd, Resumption<int, XTCC> r) override {
+  XTCC CommandClause(Cmd, Resumption<XTCC(int)> r) override {
     return XTCC(std::move(r).Resume(100).val + 1);
   }
   XTCC ReturnClause(int v) override {
@@ -54,7 +54,7 @@ void testAnswerType()
 // ------------------------------------------------------------------
 
 class TestFlatAnswerType : public FlatHandler<XTCC, Cmd> {
-  XTCC CommandClause(Cmd, Resumption<int, XTCC> r) override {
+  XTCC CommandClause(Cmd, Resumption<XTCC(int)> r) override {
     return XTCC(std::move(r).Resume(100).val + 1);
   }
 };
@@ -71,7 +71,7 @@ void testFlatAnswerType()
 // ------------------------------------------------------------------
 
 class TestAnswerTypeVoid : public Handler<XTCC, void, Cmd> {
-  XTCC CommandClause(Cmd, Resumption<int, XTCC> r) override {
+  XTCC CommandClause(Cmd, Resumption<XTCC(int)> r) override {
     return XTCC(std::move(r).Resume(100).val + 1);
   }
   XTCC ReturnClause() override {
@@ -90,7 +90,7 @@ void testAnswerTypeVoid()
 // ------------------------------------------------------------------
 
 class TestBodyType : public Handler<int, XTCC, Cmd> {
-  int CommandClause(Cmd, Resumption<int, int> r) override {
+  int CommandClause(Cmd, Resumption<int(int)> r) override {
     return std::move(r).Resume(100) + 1;
   }
   int ReturnClause(XTCC v) override {
@@ -109,7 +109,7 @@ void testBodyType()
 // ------------------------------------------------------------------
 
 class TestBodyTypeVoid : public Handler<void, XTCC, Cmd> {
-  void CommandClause(Cmd, Resumption<int, void> r) override {
+  void CommandClause(Cmd, Resumption<void(int)> r) override {
     std::cout << "*";
     std::move(r).Resume(100);
   }
@@ -143,7 +143,7 @@ public:
 // ------------------------------------------------------------------
 
 class XTestAnswerType : public Handler<XTCC, int, CmdX> {
-  XTCC CommandClause(CmdX, Resumption<int, XTCC> r) override {
+  XTCC CommandClause(CmdX, Resumption<XTCC(int)> r) override {
     return XTCC(std::move(r).Resume(100).val + 1);
   }
   XTCC ReturnClause(int v) override {
@@ -162,7 +162,7 @@ void xTestAnswerType()
 // ------------------------------------------------------------------
 
 class XTestAnswerTypeVoid : public Handler<XTCC, void, CmdX> {
-  XTCC CommandClause(CmdX, Resumption<int, XTCC> r) override {
+  XTCC CommandClause(CmdX, Resumption<XTCC(int)> r) override {
     return XTCC(std::move(r).Resume(100).val + 1);
   }
   XTCC ReturnClause() override {
@@ -181,7 +181,7 @@ void xTestAnswerTypeVoid()
 // ------------------------------------------------------------------
 
 class XTestBodyType : public Handler<int, XTCC, CmdX> {
-  int CommandClause(CmdX, Resumption<int, int> r) override {
+  int CommandClause(CmdX, Resumption<int(int)> r) override {
     return std::move(r).Resume(100) + 1;
   }
   int ReturnClause(XTCC v) override {
@@ -200,7 +200,7 @@ void xTestBodyType()
 // ------------------------------------------------------------------
 
 class XTestBodyTypeVoid : public Handler<void, XTCC, CmdX> {
-  void CommandClause(CmdX c, Resumption<int, void> r) override {
+  void CommandClause(CmdX c, Resumption<void(int)> r) override {
     if (c.val != -1) { std::cout << "*"; }
     std::move(r).Resume(100);
   }
@@ -237,7 +237,7 @@ struct CmdY : public Command<YTCC> { int val; };
 // ------------------------------------------------------------------
 
 class YTestOutType : public Handler<int, int, CmdY> {
-  int CommandClause(CmdY c, Resumption<YTCC, int> r) override {
+  int CommandClause(CmdY c, Resumption<int(YTCC)> r) override {
     return std::move(r).Resume(YTCC(c.val)) + 1;
   }
   int ReturnClause(int v) override {

@@ -18,7 +18,7 @@ using namespace CppEffects;
 // -----------------------------------
 
 template<typename S>
-struct Put : Command<void> {
+struct Put : Command<> {
   S newState;
 };
 
@@ -112,14 +112,14 @@ void testStateful()
 
 // -------------------------------------------------------
 
-struct Do : Command<void> { };
+struct Do : Command<> { };
 
 class Bracket : public Handler<void, void, Do> {
 public:
   Bracket(const std::string& msg) : msg(msg) { }
 private:
   std::string msg;
-  void CommandClause(Do, Resumption<void, void> r) override
+  void CommandClause(Do, Resumption<void()> r) override
   {
     std::string lmsg = this->msg;
     std::cout << lmsg << "+" << std::flush;
@@ -129,7 +129,7 @@ private:
   void ReturnClause() override { }
 };
 
-struct Print : Command<void> { };
+struct Print : Command<> { };
 
 class Printer : public Handler<void, void, Plain<Print>> {
 public:

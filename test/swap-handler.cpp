@@ -20,16 +20,16 @@ struct CmdAid : Command<Bottom> {
 };
 
 template <typename H>
-struct CmdAbet : Command<void> {
+struct CmdAbet : Command<> {
   std::shared_ptr<H> han;
 };
 
 template <typename H>
 class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAid<H>> {
-  typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<Bottom, typename H::AnswerType>) override {
+  typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<typename H::AnswerType(Bottom)>) override {
     return OneShot::Handle<Aid<H>>([=](){
       return OneShot::HandleWith([=](){
-          return Resumption<void, typename H::BodyType>(c.res).Resume(); },
+          return Resumption<typename H::BodyType()>(c.res).Resume(); },
         c.han);
     });
   }
@@ -42,7 +42,7 @@ class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAi
 template <typename H>
 class Abet : public Handler<typename H::BodyType, typename H::BodyType, CmdAbet<H>> {
   [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c,
-    Resumption<void, typename H::BodyType> r) override
+    Resumption<typename H::BodyType()> r) override
   {
     OneShot::InvokeCmd(CmdAid<H>{{}, c.han, r.Release()});
     exit(-1); // This will never be reached
@@ -76,7 +76,7 @@ public:
   Reader(R val) : val(val) { }
 private:
   const R val;
-  Answer CommandClause(Read<R>, Resumption<R, Answer> r) override
+  Answer CommandClause(Read<R>, Resumption<Answer(R)> r) override
   {
     return std::move(r).Resume(val);
   }

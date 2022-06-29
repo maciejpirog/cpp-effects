@@ -21,7 +21,7 @@ namespace DynamicGenerator {
 // --------------
 
 template <typename T>
-struct Yield : Command<void> {
+struct Yield : Command<> {
   T value;
 };
 
@@ -40,12 +40,12 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, Result<T>> resumption;
+  Resumption<Result<T>()> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<Result<T>, void, Yield<T>> {
-  Result<T> CommandClause(Yield<T> y, Resumption<void, Result<T>> r) final override
+  Result<T> CommandClause(Yield<T> y, Resumption<Result<T>()> r) final override
   {
     return GenState<T>{y.value, std::move(r)};
   }
@@ -123,7 +123,7 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct Yield : Command<void> {
+struct Yield : Command<> {
   T value;
 };
 
@@ -147,7 +147,7 @@ struct GenState {
 
 template <typename T>
 class GeneratorHandler : public Handler<Result<T>, void, Yield<T>> {
-  Result<T> CommandClause(Yield<T> y, Resumption<void, Result<T>> r) final override
+  Result<T> CommandClause(Yield<T> y, Resumption<Result<T>()> r) final override
   {
     return GenState<T>{y.value, r.Release()};
   }
@@ -202,7 +202,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    result = Resumption<void, Result<T>>(result.value().resumption).Resume();
+    result = Resumption<Result<T>()>(result.value().resumption).Resume();
     return result.has_value();
   }
   operator bool() const
@@ -225,7 +225,7 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct Yield : Command<void> {
+struct Yield : Command<> {
   T value;
 };
 
@@ -252,7 +252,7 @@ struct GenState {
 
 template <typename T>
 class GeneratorHandler : public Handler<void, void, Yield<T>> {
-  void CommandClause(Yield<T> y, Resumption<void, void> r) final override
+  void CommandClause(Yield<T> y, Resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, r.Release()};
   }
@@ -309,7 +309,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    Resumption<void,void>(result.value().resumption).Resume();
+    Resumption<void()>(result.value().resumption).Resume();
     return result.has_value();
   }
   operator bool() const
@@ -332,7 +332,7 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct Yield : Command<void> {
+struct Yield : Command<> {
   T value;
 };
 
@@ -354,12 +354,12 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, void> resumption;
+  Resumption<void()> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<void, void, Yield<T>> {
-  void CommandClause(Yield<T> y, Resumption<void, void> r) final override
+  void CommandClause(Yield<T> y, Resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
   }
@@ -440,7 +440,7 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct CmdYield : Command<void> {
+struct CmdYield : Command<> {
   const T value;
 };
 
@@ -465,12 +465,12 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, void> resumption;
+  Resumption<void()> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<void, void, CmdYield<T>> {
-  void CommandClause(CmdYield<T> y, Resumption<void, void> r) final override
+  void CommandClause(CmdYield<T> y, Resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
   }
@@ -549,7 +549,7 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct CmdYield : Command<void> {
+struct CmdYield : Command<> {
   const T value;
 };
 
@@ -574,12 +574,12 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, void> resumption;
+  Resumption<void()> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<void, void, CmdYield<T>> {
-  void CommandClause(CmdYield<T> y, Resumption<void, void> r) final override
+  void CommandClause(CmdYield<T> y, Resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
   }
@@ -661,7 +661,7 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct CmdYield : Command<void> {
+struct CmdYield : Command<> {
   const T value;
 };
 
@@ -686,12 +686,12 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, void> resumption;
+  Resumption<void()> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<void, void, NoManage<CmdYield<T>>> {
-  void CommandClause(CmdYield<T> y, Resumption<void, void> r) final override
+  void CommandClause(CmdYield<T> y, Resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
   }

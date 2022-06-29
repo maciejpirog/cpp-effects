@@ -79,7 +79,7 @@ void kill()
   OneShot::InvokeCmd(Kill{});
 }
 
-using Res = Resumption<void, void>;
+using Res = Resumption<void()>;
 
 class Scheduler : public Handler<void, void, Yield, Fork, Kill> {
 public:

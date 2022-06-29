@@ -11,10 +11,10 @@
 
 using namespace CppEffects;
 
-struct Break : Command<void> { };
+struct Break : Command<> { };
 
 class HH : public Handler<int, void, Break> {
-  int CommandClause(Break, Resumption<void, int>) override {
+  int CommandClause(Break, Resumption<int()>) override {
     return 100;
   }
   int ReturnClause() override {

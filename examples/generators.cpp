@@ -40,12 +40,12 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void, Result<T>> resumption;
+  Resumption<Result<T>()> resumption;
 };
 
 template <typename T>
 class GeneratorHandler : public Handler<Result<T>, void, NoManage<Yield<T>>> {
-  Result<T> CommandClause(Yield<T> y, Resumption<void, Result<T>> r) override
+  Result<T> CommandClause(Yield<T> y, Resumption<Result<T>()> r) override
   {
     return GenState<T>{y.value, std::move(r)};
   }

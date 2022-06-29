@@ -23,7 +23,7 @@ public:
   Reader(R val) : val(val) { }
 private:
   const R val;
-  void CommandClause(Read<R>, Resumption<R, void> r) override
+  void CommandClause(Read<R>, Resumption<void(R)> r) override
   {
     std::move(r).TailResume(val);
   }

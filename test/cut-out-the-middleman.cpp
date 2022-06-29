@@ -19,23 +19,23 @@ using namespace CppEffects;
 // 1.
 // --
 
-struct PingOuter : Command<void> { };
+struct PingOuter : Command<> { };
 
-struct PingInner : Command<void> { };
+struct PingInner : Command<> { };
 
-struct CutMiddlemanAid : Command<void> { };
+struct CutMiddlemanAid : Command<> { };
 
-struct CutMiddlemanAbet : Command<void> {
+struct CutMiddlemanAbet : Command<> {
   ResumptionData<void, void>* res;
 };
 
 class HInner : public Handler<void, void, PingInner, CutMiddlemanAid> {
-  void CommandClause(PingInner, Resumption<void, void> r) override
+  void CommandClause(PingInner, Resumption<void()> r) override
   {
     std::cout << "Inner!" << std::endl;
     std::move(r).TailResume();
   }
-  void CommandClause(CutMiddlemanAid, Resumption<void, void> r) override
+  void CommandClause(CutMiddlemanAid, Resumption<void()> r) override
   {
     OneShot::InvokeCmd(CutMiddlemanAbet{{}, r.Release()});
   }
@@ -43,14 +43,14 @@ class HInner : public Handler<void, void, PingInner, CutMiddlemanAid> {
 };
 
 class HOuter : public Handler<void, void, PingOuter, CutMiddlemanAbet> {
-  void CommandClause(PingOuter, Resumption<void, void> r) override
+  void CommandClause(PingOuter, Resumption<void()> r) override
   {
     std::cout << "Outer!" << std::endl;
     std::move(r).TailResume();
   }
-  void CommandClause(CutMiddlemanAbet a, Resumption<void, void>) override
+  void CommandClause(CutMiddlemanAbet a, Resumption<void()>) override
   {
-    Resumption<void, void>(a.res).TailResume();
+    Resumption<void()>(a.res).TailResume();
   }
 
   void ReturnClause() override { }
@@ -93,9 +93,9 @@ void test1()
 
 ResumptionData<void, int>* Res = nullptr;
 
-struct Inc : Command<void> { };
+struct Inc : Command<> { };
 
-struct Break : Command<void> { };
+struct Break : Command<> { };
 
 void inc()
 {
@@ -107,16 +107,16 @@ void break_()
 }
 int resume()
 {
-  return Resumption<void, int>(Res).Resume();
+  return Resumption<int()>(Res).Resume();
 }
 
 class HIP : public Handler<int, int, Inc, Break> {
-  int CommandClause(Break, Resumption<void, int> r) override
+  int CommandClause(Break, Resumption<int()> r) override
   {
     Res = r.Release();
     return 0;
   }
-  int CommandClause(Inc, Resumption<void, int> r) override
+  int CommandClause(Inc, Resumption<int()> r) override
   {
     return std::move(r).Resume() + 1;
   }

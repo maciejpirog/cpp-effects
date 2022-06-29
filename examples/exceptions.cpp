@@ -35,7 +35,7 @@ public:
   WithDefault(const T& t) : defaultVal(t) { }
 private:
   const T defaultVal;
-  T CommandClause(Error, Resumption<void, T>) override
+  T CommandClause(Error, Resumption<T()>) override
   {
     return defaultVal;
   }

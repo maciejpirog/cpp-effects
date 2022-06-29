@@ -16,7 +16,7 @@ using namespace CppEffects;
 // return clause
 // -------------------------------------------------------------------
 
-struct Cmd : public Command<void> { };
+struct Cmd : public Command<> { };
 
 class MyHandler : public Handler<void, void, Cmd> {
 public:
@@ -25,7 +25,7 @@ private:
   std::string msg = "alive";
   void PrintStatus() { std::cout << "I'm " << this->msg << "!" << std::endl; }
   void ReturnClause() override { }
-  void CommandClause(Cmd, Resumption<void, void> r) override
+  void CommandClause(Cmd, Resumption<void()> r) override
   {
     this->PrintStatus();
     std::move(r).Resume();
@@ -47,20 +47,20 @@ void afterReturn()
 // resumption lives on
 // -----------------------------------------------------------
 
-struct OtherCmd : Command<void> { };
+struct OtherCmd : Command<> { };
 
-Resumption<void, void> res;
+Resumption<void()> res;
 
 class EscapeHandler :  public Handler<void, void, Cmd, OtherCmd> {
 public:
   ~EscapeHandler() { std::cout << "The handler is dead!" << std::endl; }
 private:
-  void CommandClause(Cmd, Resumption<void, void> r)
+  void CommandClause(Cmd, Resumption<void()> r)
   {
     res = std::move(r);
     std::cout << "Must give us pause!" << std::endl;
   }
-  void CommandClause(OtherCmd, Resumption<void, void> r)
+  void CommandClause(OtherCmd, Resumption<void()> r)
   {
     std::cout << "[[This is other cmd]]" << std::endl;
     std::move(r).TailResume();

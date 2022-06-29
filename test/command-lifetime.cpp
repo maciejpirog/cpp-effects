@@ -12,7 +12,7 @@
 
 using namespace CppEffects;
 
-class Cmd : public Command<void> {
+class Cmd : public Command<> {
 public:
   int id;
   Cmd() : id(rand() % 1000) { std::cout << id << " born" << std::endl; }
@@ -33,7 +33,7 @@ public:
 
 class MyHandler : public Handler<void, void, Cmd> {
   void ReturnClause() override { }
-  void CommandClause(Cmd c, Resumption<void, void> r) override
+  void CommandClause(Cmd c, Resumption<void()> r) override
   {
     std::cout << "In handler: received command id = " << c.id << std::endl;
     std::move(r).Resume();

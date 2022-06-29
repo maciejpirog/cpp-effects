@@ -121,17 +121,17 @@ void testStateful()
 template <typename Answer, typename S>
 class HLambda : public Handler<std::function<Answer(S)>, Answer, Put<S>, Get<S>> {
   std::function<Answer(S)> CommandClause(Put<S> p,
-    Resumption<void, std::function<Answer(S)>> r) override
+    Resumption<std::function<Answer(S)>()> r) override
   {
     return [p, r = r.Release()](S) -> Answer {
-      return Resumption<void, std::function<Answer(S)>>(r).Resume()(p.newState);
+      return Resumption<std::function<Answer(S)>()>(r).Resume()(p.newState);
     };
   }
   std::function<Answer(S)> CommandClause(Get<S>,
-    Resumption<S, std::function<Answer(S)>> r) override
+    Resumption<std::function<Answer(S)>(S)> r) override
   {
     return [r = r.Release()](S s) -> Answer {
-      return Resumption<S, std::function<Answer(S)>>(r).Resume(s)(s);
+      return Resumption<std::function<Answer(S)>(S)>(r).Resume(s)(s);
     };
   }
   std::function<Answer(S)> ReturnClause(Answer a) override
@@ -143,17 +143,17 @@ class HLambda : public Handler<std::function<Answer(S)>, Answer, Put<S>, Get<S>>
 template <typename S>
 class HLambda<void, S> : public Handler<std::function<void(S)>, void, Put<S>, Get<S>> {
   std::function<void(S)> CommandClause(Put<S> p,
-    Resumption<void, std::function<void(S)>> r) override
+    Resumption<std::function<void(S)>()> r) override
   {
     return [r = r.Release(), p](S) -> void {
-      Resumption<void, std::function<void(S)>>(r).Resume()(p.newState);
+      Resumption<std::function<void(S)>()>(r).Resume()(p.newState);
     };
   }
   std::function<void(S)> CommandClause(Get<S>,
-    Resumption<S, std::function<void(S)>> r) override
+    Resumption<std::function<void(S)>(S)> r) override
   {
     return [r = r.Release()](S s) -> void {
-      Resumption<S, std::function<void(S)>>(r).Resume(s)(s);
+      Resumption<std::function<void(S)>(S)>(r).Resume(s)(s);
     };
   }
   std::function<void(S)> ReturnClause() override
@@ -193,10 +193,10 @@ struct CmdAbet : Command<> {
 
 template <typename H>
 class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAid<H>> {
-  typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<Bottom, typename H::AnswerType>) override {
+  typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<typename H::AnswerType(Bottom)>) override {
     return OneShot::Handle<Aid<H>>([=](){
       return OneShot::HandleWith([=](){
-        return Resumption<void, typename H::BodyType>(c.res).Resume();
+        return Resumption<typename H::BodyType()>(c.res).Resume();
       }, c.han);
     });
   }
@@ -208,7 +208,7 @@ class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAi
 
 template <typename H>
 class Abet : public Handler<typename H::BodyType, typename H::BodyType, CmdAbet<H>> {
-  [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c, Resumption<void, typename H::BodyType> r) override {
+  [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c, Resumption<typename H::BodyType()> r) override {
     OneShot::InvokeCmd(CmdAid<H>{{}, c.han, r.Release()});
     exit(-1); // This will never be reached
   }
@@ -241,7 +241,7 @@ public:
   Reader(R val) : val(val) { }
 private:
   const R val;  // Note the const modifier!
-  Answer CommandClause(Read<R>, Resumption<int,Answer> r) override
+  Answer CommandClause(Read<R>, Resumption<Answer(int)> r) override
   {
     return std::move(r).TailResume(val);
   }
@@ -253,13 +253,13 @@ private:
 
 template<typename Answer, typename S>
 class HSwitching : public Handler<Answer, Answer, Put<S>, Get<S>> {
-  Answer CommandClause(Put<S> p, Resumption<void, Answer> r) override
+  Answer CommandClause(Put<S> p, Resumption<Answer()> r) override
   {
     OneShot::InvokeCmd(
       CmdAbet<ReaderType<Answer, S>>{{}, std::make_shared<Reader<Answer, S>>(p.newState)});
     return std::move(r).Resume();
   }
-  Answer CommandClause(Get<S>, Resumption<S, Answer> r) override
+  Answer CommandClause(Get<S>, Resumption<Answer(S)> r) override
   {
     return std::move(r).Resume(OneShot::InvokeCmd(Read<S>{}));
   }

@@ -55,7 +55,7 @@ void fork(std::function<void()> proc)
 We define the scheduler, which is a **handler** that can interpret the two commands by pushing the resumptions (i.e., captured continuations) to the queue.
 
 ```cpp
-using Res = Resumption<void, void>;
+using Res = Resumption<void()>;
 
 class Scheduler : public FlatHandler<void, Yield, Fork> {
 public:

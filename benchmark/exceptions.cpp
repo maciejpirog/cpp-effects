@@ -43,11 +43,11 @@ void testNative(int max, int mod_)
 // Handlers
 // --------
 
-struct Error : Command<void> { };
+struct Error : Command<> { };
 
 class Catch : public Handler<void, void, Error> {
   void ReturnClause () final override { }
-  void CommandClause(Error, Resumption<void, void>) final override { esum++; }
+  void CommandClause(Error, Resumption<void()>) final override { esum++; }
 };
 
 void testHandlers(int max, int mod_)

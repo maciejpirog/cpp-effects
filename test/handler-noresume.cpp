@@ -12,14 +12,14 @@
 
 using namespace CppEffects;
 
-struct Print : Command<void> { };
+struct Print : Command<> { };
 
 class Printer : public Handler<int, int, Print> {
 public:
   Printer(const std::string& msg) : msg(msg) { }
 private:
   std::string msg;
-  int CommandClause(Print, Resumption<void, int> r) override
+  int CommandClause(Print, Resumption<int()> r) override
   {
     std::cout << msg << std::flush;
     return std::move(r).Resume();
@@ -27,7 +27,7 @@ private:
   int ReturnClause(int a) override { return a + 1; }
 };
 
-struct Error : Command<void> { };
+struct Error : Command<> { };
 
 class Catch : public Handler<int, int, NoResume<Error>> {
   int CommandClause(Error) override

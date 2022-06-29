@@ -81,7 +81,7 @@ private:
 // Internal stuff
 // --------------
 
-using Res = Resumption<void, void>;
+using Res = Resumption<void()>;
 
 struct ActorInfo {
   ActorBase* actorData;

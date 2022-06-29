@@ -68,22 +68,24 @@ struct Command;
 template <typename Out>
 struct Command<Out> {
   using OutType = Out;
+  template <typename Answer> using ResumptionType = Answer(Out);
 };
 
 template <>
 struct Command<> {
   using OutType = void;
+  template <typename Answer> using ResumptionType = Answer();
 };
 
 // -----------
 // Resumptions
 // -----------
 
-template <typename Out, typename Answer> class Resumption;
+template <typename T> class Resumption;
 
 class ResumptionBase {
   friend class OneShot;
-  template <typename, typename> friend class Resumption;
+  template <typename> friend class Resumption;
   template <typename, typename> friend class ResumptionData;
 public:
   virtual ~ResumptionBase() { }
@@ -95,7 +97,7 @@ template <typename Out, typename Answer>
 class ResumptionData final : public ResumptionBase {
   friend class OneShot;
   template <typename, typename> friend class CmdClause;
-  template <typename, typename> friend class Resumption;
+  template <typename> friend class Resumption;
 private:
   std::list<MetaframePtr> storedMetastack;
   std::optional<Tangible<Out>> cmdResultTransfer; // Used to transfer data between fibers
@@ -104,7 +106,7 @@ private:
 };
 
 template <typename Out, typename Answer>
-class Resumption
+class Resumption<Answer(Out)>
 {
   friend class OneShot;
 public:
@@ -112,14 +114,14 @@ public:
   Resumption(ResumptionData<Out, Answer>* data) : data(data) { }
   Resumption(ResumptionData<Out, Answer>& data) : data(&data) { }
   Resumption(std::function<Answer(Out)>);
-  Resumption(const Resumption<Out, Answer>&) = delete;
-  Resumption(Resumption<Out, Answer>&& other)
+  Resumption(const Resumption<Answer(Out)>&) = delete;
+  Resumption(Resumption<Answer(Out)>&& other)
   {
     data = other.data;
     other.data = nullptr;
   }
-  Resumption& operator=(const Resumption<Out, Answer>&) = delete;
-  Resumption& operator=(Resumption<Out, Answer>&& other)
+  Resumption& operator=(const Resumption<Answer(Out)>&) = delete;
+  Resumption& operator=(Resumption<Answer(Out)>&& other)
   {
     if (this != &other) {
       data = other.data;
@@ -162,7 +164,7 @@ private:
 };
 
 template <typename Answer>
-class Resumption<void, Answer>
+class Resumption<Answer()>
 {
   friend class OneShot;
 public:
@@ -170,14 +172,14 @@ public:
   Resumption(ResumptionData<void, Answer>* data) : data(data) { }
   Resumption(ResumptionData<void, Answer>& data) : data(&data) { }
   Resumption(std::function<Answer()>);
-  Resumption(const Resumption<void, Answer>&) = delete;
-  Resumption(Resumption<void, Answer>&& other)
+  Resumption(const Resumption<Answer()>&) = delete;
+  Resumption(Resumption<Answer()>&& other)
   {
     data = other.data;
     other.data = nullptr;
   }
-  Resumption& operator=(const Resumption<void, Answer>&) = delete;
-  Resumption& operator=(Resumption<void, Answer>&& other)
+  Resumption& operator=(const Resumption<Answer()>&) = delete;
+  Resumption& operator=(Resumption<Answer()>&& other)
   {
     if (this != &other) {
       data = other.data;
@@ -279,7 +281,7 @@ class CmdClause : public CanInvokeCmdClause<Cmd> {
   friend class OneShot;
   template <typename, typename, typename...> friend class Handler;
 protected:
-  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
+  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::template ResumptionType<Answer>>) = 0;
 private:
   virtual typename Cmd::OutType InvokeCmd(
     std::list<MetaframePtr>::iterator it, const Cmd& cmd) final override;
@@ -415,19 +417,19 @@ public:
   }
 
   template <typename H, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     int64_t label, std::function<typename H::BodyType()> body, Args&&... args)
   {
-    return Resumption<void, typename H::AnswerType>([=](){
+    return Resumption<typename H::AnswerType()>([=](){
       return OneShot::Handle<H>(label, body, std::forward<Args>(args)...);
     });
   }
 
   template <typename H, typename A, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     int64_t label, std::function<typename H::BodyType(A)> body, Args&&... args)
   {
-    return Resumption<void, typename H::AnswerType>([=](A a){
+    return Resumption<typename H::AnswerType()>([=](A a){
       return OneShot::Handle<H>(label, std::bind(body, a), std::forward<Args>(args)...);
     });
   }
@@ -453,19 +455,19 @@ public:
   }
 
   template <typename H, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     std::function<typename H::BodyType()> body, Args&&... args)
   {
-    return Resumption<void, typename H::AnswerType>([=](){
+    return Resumption<typename H::AnswerType()>([=](){
       return OneShot::Handle<H>(body, std::forward<Args>(args)...);
     });
   }
 
   template <typename H, typename A, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     std::function<typename H::BodyType(A)> body, Args&&... args)
   {
-    return Resumption<void, typename H::AnswerType>([=](A a){
+    return Resumption<typename H::AnswerType()>([=](A a){
       return OneShot::Handle<H>(std::bind(body, a), std::forward<Args>(args)...);
     });
   }
@@ -543,19 +545,19 @@ public:
   }
 
   template <typename H>
-  static Resumption<void, typename H::AnswerType> WrapWith(
+  static Resumption<typename H::AnswerType()> WrapWith(
     int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
   {
-    return Resumption<void, typename H::AnswerType>([=](){
+    return Resumption<typename H::AnswerType()>([=](){
       return OneShot::HandleWith<H>(label, body, handler);
     });
   }
 
   template <typename H, typename A>
-  static Resumption<void, typename H::AnswerType> WrapWith(
+  static Resumption<typename H::AnswerType()> WrapWith(
     int64_t label, std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler)
   {
-    return Resumption<void, typename H::AnswerType>([=](A a){
+    return Resumption<typename H::AnswerType()>([=](A a){
       return OneShot::HandleWith<H>(label, std::bind(body, a), handler);
     });
   }
@@ -582,19 +584,19 @@ public:
   }
 
   template <typename H>
-  static Resumption<void, typename H::AnswerType> WrapWith(
+  static Resumption<typename H::AnswerType()> WrapWith(
     std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
   {
-    return Resumption<void, typename H::AnswerType>([=](){
+    return Resumption<typename H::AnswerType()>([=](){
       return OneShot::HandleWith<H>(body, handler);
     });
   }
 
   template <typename H, typename A>
-  static Resumption<void, typename H::AnswerType> WrapWith(
+  static Resumption<typename H::AnswerType()> WrapWith(
     std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler)
   {
-    return Resumption<void, typename H::AnswerType>([=](A a){
+    return Resumption<typename H::AnswerType()>([=](A a){
       return OneShot::HandleWith<H>(std::bind(body, a), handler);
     });
   }
@@ -734,9 +736,9 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
 
     if constexpr (!std::is_void<Answer>::value) {
       *(static_cast<std::optional<Answer>*>(OneShot::Metastack.front()->returnBuffer)) =
-        this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
+        this->CommandClause(cmd, Resumption<typename Cmd::template ResumptionType<Answer>>(resumption));
     } else {
-      this->CommandClause(cmd, Resumption<Out, Answer>(resumption));
+      this->CommandClause(cmd, Resumption<typename Cmd::template ResumptionType<Answer>>(resumption));
     }
     return ctx::fiber();
   });
@@ -755,18 +757,18 @@ typename Cmd::OutType CmdClause<Answer, Cmd>::InvokeCmd(
 }
 
 template <typename Out, typename Answer>
-Resumption<Out, Answer>::Resumption(std::function<Answer(Out)> func)
+Resumption<Answer(Out)>::Resumption(std::function<Answer(Out)> func)
 {
-  Resumption<Out, Answer> resumption;
+  Resumption<Answer(Out)> resumption;
 
-  struct Abort : Command<void> { };
+  struct Abort : Command<> { };
   class HAbort : public FlatHandler<void, Abort> {
-    void CommandClause(Abort, Resumption<void, void>) override { }
+    void CommandClause(Abort, Resumption<void()>) override { }
   };
 
-  struct Arg : Command<Out> { Resumption<Out, Answer>& res; };
+  struct Arg : Command<Out> { Resumption<Answer(Out)>& res; };
   class HArg : public FlatHandler<Answer, Arg> {
-    Answer CommandClause(Arg a, Resumption<Out, Answer> r) override
+    Answer CommandClause(Arg a, Resumption<Answer(Out)> r) override
     { 
       a.res = std::move(r);
       OneShot::InvokeCmd(Abort{});
@@ -783,18 +785,18 @@ Resumption<Out, Answer>::Resumption(std::function<Answer(Out)> func)
 }
 
 template <typename Answer>
-Resumption<void, Answer>::Resumption(std::function<Answer()> func)
+Resumption<Answer()>::Resumption(std::function<Answer()> func)
 {
-  Resumption<void, Answer> resumption;
+  Resumption<Answer()> resumption;
 
-  struct Abort : Command<void> { };
+  struct Abort : Command<> { };
   class HAbort : public FlatHandler<void, Abort> {
-    void CommandClause(Abort, Resumption<void, void>) override { }
+    void CommandClause(Abort, Resumption<void()>) override { }
   };
 
-  struct Arg : Command<void> { Resumption<void, Answer>& res; };
+  struct Arg : Command<> { Resumption<Answer()>& res; };
   class HArg : public FlatHandler<Answer, Arg> {
-    Answer CommandClause(Arg a, Resumption<void, Answer> r) override
+    Answer CommandClause(Arg a, Resumption<Answer()> r) override
     {
       a.res = std::move(r);
       OneShot::InvokeCmd(Abort{});
@@ -864,7 +866,7 @@ void ResumptionData<Out, Answer>::TailResume()
 }
 
 template <typename Out, typename Answer>
-Answer Resumption<Out, Answer>::TailResume(Out cmdResult) &&
+Answer Resumption<Answer(Out)>::TailResume(Out cmdResult) &&
 {
   data->cmdResultTransfer->value = std::move(cmdResult);
   // Trampoline back to Handle
@@ -875,7 +877,7 @@ Answer Resumption<Out, Answer>::TailResume(Out cmdResult) &&
 }
 
 template <typename Answer>
-Answer Resumption<void, Answer>::TailResume() &&
+Answer Resumption<Answer()>::TailResume() &&
 {
   // Trampoline back to Handle
   OneShot::tailAnswer() = TailAnswer{Release()};

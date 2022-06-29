@@ -12,7 +12,7 @@
 #include <tuple>
 
 #include "cpp-effects/cpp-effects.h"
-#include "cpp-effects/clause-modifiers.h"
+//#include "cpp-effects/clause-modifiers.h"
 
 using namespace CppEffects;
 
@@ -47,7 +47,7 @@ void kill()
 // Scheduler for threads
 // ---------------------
 
-using Res = Resumption<void, void>;
+using Res = Resumption<void()>;
 
 class Scheduler : public Handler<void, void, Yield, Fork, Kill> {
 public:
