@@ -24,6 +24,7 @@
 #include <list>
 #include <optional>
 #include <typeinfo>
+#include <tuple>
 
 namespace CppEffects {
 
@@ -277,10 +278,15 @@ public:
   }
   Answer Resume(Outs... cmdResults) &&
   {
-    data->cmdResultTransfer->value = std::make_tuple<Outs...>(std::forward<Outs>(cmdResults)...);
-    return Release()->Resume();
+    return std::move(*this).Resume(
+      std::make_tuple<Outs...>(std::forward<Outs>(cmdResults)...));
   }
   Answer TailResume(std::tuple<Outs...> cmdResult) &&;
+  Answer TailResume(Outs... cmdResults) &&
+  {
+    return std::move(*this).TailResume(
+      std::make_tuple<Outs...>(std::forward<Outs>(cmdResults)...));
+  }
 private:
   ResumptionData<std::tuple<Outs...>, Answer>* data = nullptr;
 };
@@ -944,6 +950,17 @@ Answer Resumption<Out, Answer>::TailResume(Out cmdResult) &&
 template <typename Answer>
 Answer Resumption<void, Answer>::TailResume() &&
 {
+  // Trampoline back to Handle
+  OneShot::tailAnswer() = TailAnswer{Release()};
+  if constexpr (!std::is_void<Answer>::value) {
+    return Answer();
+  }
+}
+
+template <typename Answer, typename... Outs>
+Answer Resumption<std::tuple<Outs...>, Answer>::TailResume(std::tuple<Outs...> cmdResult) &&
+{
+  data->cmdResultTransfer->value = std::move(cmdResult);
   // Trampoline back to Handle
   OneShot::tailAnswer() = TailAnswer{Release()};
   if constexpr (!std::is_void<Answer>::value) {
