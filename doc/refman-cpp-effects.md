@@ -15,71 +15,103 @@ struct Command;
 template <typename Out>
 struct Command<Out> {
   using OutType = Out;
+  template <typename Answer> using ResumptionType = Answer(Out);
 };
 
 template <>
 struct Command<> {
   using OutType = void;
+  template <typename Answer> using ResumptionType = Answer();
 };
 ```
 
-- `typename... Outs` - The return type(s) of invoking the (derived) command (i.e., the return type of [`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd)). Should be at least move-constructible and move-assignable.
+A class derived from `Command` can be used as a command if it is at least copy-constructible.
 
-**NOTE:** A class derived from `Command` can be used as a command if it is at least copy-constructible.
+**Type parameters:**
 
-#### :large_orange_diamond: Command<Out>::OutType
+- `typename... Outs` - The return type of invoking the (derived) command (i.e., the return type of [`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd)). Should be at least move-constructible and move-assignable. Leave empty if the command should not return any value (in such case, the return type of `InvokeCmd` is `void`).
+
+#### :large_orange_diamond: OutType
 
 ```cpp
-using OutType = Out;
+using OutType = Out;   // in Command<Out>
+using OutType = void;  // in Command<>
 ```
 
-Reveals the return type of the command.
+The type returned by [`OneShot::InvokeCmd`](refman-cpp-effects.md#large_orange_diamond-oneshotinvokecmd) called with the (drived) command.
+
+#### :large_orange_diamond: ResumptionType
+
+```cpp
+template <typename Answer> using ResumptionType = Answer(Out);  // in Command<Out>
+template <typename Answer> using ResumptionType = Answer();     // in Command<>
+```
+
+The type parameter of the resumption that captures a computation suspended by invoking the (derived) command. The type of the resumption depends also on the overall answer type of the handler, hence `ResumptionType` is a template.
+
+Compare the type of `CmdClause<Answer, Cmd>::CommandClause` for a command `Cmd`:
+
+```cpp
+Answer CommandClause(Cmd, Resumption<typename Cmd::template ResumptionType<Answer>>)
+```
+
+For example, for `Cmd : Command<int>` and `Answer = bool`, the type of `CmdClause<bool, Cmd>::CommandClause` is:
+
+```cpp
+bool CommandClause(Cmd, Resumption<bool(int)>)
+```
 
 ## class `Resumption`
 
-Resumption represents a captured continuation, that is, a suspended computation. A resumption is given to the user either as the argument of [`Handler::CommandClause`](refman-cpp-effects.md#large_orange_diamond-cmdclauseanswercmdcommandclause), or can be lifted from a function using a constructor.
+A resumption represents a suspended computation. A resumption is given to the user either as an argument of [`Handler::CommandClause`](refman-cpp-effects.md#large_orange_diamond-cmdclauseanswercmdcommandclause), or can be lifted from a function using a constructor.
 
 ```cpp
+template <typename T> class Resumption;
+
 template <typename Out, typename Answer>
-class Resumption
+class Resumption<Answer(Out)>
 {
 public:
-  Resumption();
+  Resumption() { }
   
-  Resumption(ResumptionData<Out, Answer>* data) : data(data);
+  Resumption(ResumptionData<Out, Answer>* data);
+  
+  Resumption(ResumptionData<Out, Answer>& data);
   
   Resumption(std::function<Answer(Out)>);
-
-  Resumption(const Resumption<Out, Answer>&) = delete;
   
-  Resumption& operator=(const Resumption<Out, Answer>&) = delete;
+  Resumption(const Resumption<Answer(Out)>&) = delete;
   
-  Resumption(Resumption<Out, Answer>&& other);
-
-  Resumption& operator=(Resumption<Out, Answer>&& other);
-
+  Resumption(Resumption<Answer(Out)>&& other);
+  
+  Resumption& operator=(const Resumption<Answer(Out)>&) = delete;
+  
+  Resumption& operator=(Resumption<Answer(Out)>&& other);
+  
+  ~Resumption();
+  
   explicit operator bool() const;
-
+  
   bool operator!() const;
-
+  
   ResumptionData<Out, Answer>* Release();
   
   Answer Resume(Out cmdResult) &&;
-
+  
   Answer TailResume(Out cmdResult) &&;
 };
 
-// Specialisation for void
 template <typename Answer>
-class Resumption<void, Answer>
-{
+class Resumption<Answer()> {
 public:
   // Same as the general version, except for:
   
   Resumption(std::function<Answer()>);
   
+  ResumptionData<void, Answer>* Release();
+  
   Answer Resume() &&;
-
+  
   Answer TailResume() &&;
 };
 ```
@@ -88,21 +120,26 @@ Objects of the `Resumption` class are movable but not copyable. This is because 
 
 The `Resumption` class is actually a form of a smart pointer, so moving it around is cheap.
 
-- `typename Out` - In a proper resumption, the output type of the command that suspended the computation. In a plain resumption, the input type of the lifted function.
+**Type parameters:**
 
-- `typename Answer` - The return type of the suspended computation (i.e., the return type of `Resumption<Out, Answer>::Resume`).
+- `typename T` - A function type that corresponds to the type of the suspended computation.
 
+**Specialisations:**
 
-#### :large_orange_diamond: Resumption<Out, Answer>::Resumption
+- `Resumption<Answer()>` - A computations that, when resumed, will return a value of type `Answer`.
+
+- `Resumption<Answer(Out)>` - A computation that needs a value of type `Out` to be resumed (`Out` being the output type of the operation on which the computation was suspended), and will return a value of type `Answer`.
+
+#### :large_orange_diamond: Resumption<T>::Resumption
 
 ```cpp
-/* 1 */ Resumption<Out, Answer>::Resumption()
+/* 1 */ Resumption<Answer(Out)>::Resumption()
   
-/* 2 */ Resumption<Out, Answer>::Resumption(ResumptionData<Out, Answer>* data)
+/* 2 */ Resumption<Answer(Out)>::Resumption(ResumptionData<Out, Answer>* data)
 
-/* 3 */ Resumption<Out, Answer>::Resumption(std::function<Answer(Out)> func)
+/* 3 */ Resumption<Answer(Out)>::Resumption(std::function<Answer(Out)> func)
 
-/* 4 */ Resumption<void, Answer>::Resumption(std::function<Answer()> func)
+/* 4 */ Resumption<Answer()>::Resumption(std::function<Answer()> func)
 ```
 
 Constructors.
@@ -124,7 +161,7 @@ Arguments:
 - `std::function<Answer()> func` - The lifted function (specialisation for `Out == void`).
 
 
-#### :large_orange_diamond: Resumption<Out, Answer>::operator bool
+#### :large_orange_diamond: Resumption<T>::operator bool
 
 Check if the resumption is valid. The resumption becomes invalid if moved elsewhere (in particular, when resumed).
 
@@ -134,7 +171,7 @@ explicit operator bool() const;
 
 - **return value** `bool` - Indicates if the resumption is valid.
 
-#### :large_orange_diamond: Resumption<Out, Answer>::operator!
+#### :large_orange_diamond: Resumption<T>::operator!
 
 Check if the resumption is invalid. The resumption becomes invalid if moved elsewhere (in particular, when resumed).
 
@@ -144,7 +181,7 @@ bool operator!() const;
 
 - **return value** `bool` - Indicates if the resumption is invalid.
 
-#### :large_orange_diamond: Resumption<Out, Answer>::Release
+#### :large_orange_diamond: Resumption<T>::Release
 
 ```cpp
 ResumptionData<Out, Answer>* Release();
@@ -157,21 +194,20 @@ Releases the pointer to the suspended computation.
 **Warning:** :warning: Never use `delete` on the released pointer! If you want to get rid of it safely, wrap it back in a dummy `Resumption` value, and let its destructor do the job. For example:
 
 ```cpp
-void foo(Resumption<void, int> r)
+void foo(Resumption<int()> r)
 {
   auto ptr = r.Release();
   // ...
-  Resumption<void, int>{ptr};
+  Resumption<int()>{ptr};
 }
 ```
 
-#### :large_orange_diamond: Resumption<Out, Answer>::Resume
+#### :large_orange_diamond: Resumption<T>::Resume
 
 ```cpp
-Answer Resumption<Out, Answer>::Resume(Out cmdResult) &&
+Answer Resumption<Answer(Out)>::Resume(Out cmdResult) &&
 
-// overload for Out == void
-Answer Resumption<void, Answer>::Resume() &&
+Answer Resumption<Answer()>::Resume() &&
 ```
 
 Resume the suspended computation captured in the resumption.
@@ -180,13 +216,12 @@ Resume the suspended computation captured in the resumption.
 
 - **Return value** `Answer` - The result of the resumed computation.
 
-#### :large_orange_diamond: Resumption<Out, Answer>::TailResume
+#### :large_orange_diamond: Resumption<T>::TailResume
 
 ```cpp
-Answer Resumption<Out, Answer>::TailResume(Out cmdResult) &&
+Answer Resumption<Answer(Out)>::TailResume(Out cmdResult) &&
 
-// overload for Out == void
-Answer Resumption<void, Answer>::TailResume() &&
+Answer Resumption<Answer()>::TailResume() &&
 ```
 
 Use to resume the suspended computation captured in the resumption in a tail position in the command clause. This is to be used **only inside a command clause** as the returned expression. Semantically, for an rvalue reference `r`, the expressions `return r.Resume(...);` and `return r.TailResume(...);` are semantically equivalent, but the latter does not build up the call stack.
@@ -195,11 +230,10 @@ Use to resume the suspended computation captured in the resumption in a tail pos
 
 - **Return value** `Answer` - The result of the resumed computation.
 
-
 Tail-resumes are useful in command clauses such as:
 
 ```cpp
-int CommandClause(SomeCommand, Resumption<void, int> r) override
+int CommandClause(SomeCommand, Resumption<int()> r) override
 {
   // do sth
   return std::move(r).TailResume();
@@ -218,7 +252,7 @@ In this example, we will build up the call stack until the entire handler return
 ```cpp
 class H : Handler<Answer, void, Op> {
   // ...
-  Answer CommandClause(Op, Resumption<void, Answer> r) override
+  Answer CommandClause(Op, Resumption<Answer()> r) override
   {
     return std::move(r).TailResume();
   }
@@ -243,9 +277,9 @@ class ResumptionData : public ResumptionBase
 };
 ```
 
-- `typename Out` - In a proper resumption, the output type of the command that suspended the computation. In a plain resumption, the input type of the lifted function.
+- `typename Out` - In a proper resumption, the output type of the command that suspended the computation. In a plain resumption, the input type of the lifted function. Can be `void`.
 
-- `typename Answer` - The return type of the suspended computation (i.e., the return type of `Resumption<Out, Answer>::Resume` applied to the resumption).
+- `typename Answer` - The return type of the suspended computation.
 
 ## class `CmdClause`
 
@@ -255,7 +289,7 @@ The class for a command clause for a single command in a handler. A handler can 
 template <typename Answer, typename Cmd>
 class CmdClause {
 protected:
-  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
+  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::template ResumptionType<Answer>>) = 0;
 };
 ```
 
@@ -267,14 +301,14 @@ protected:
 #### :large_orange_diamond: CmdClause<Answer,Cmd>::CommandClause
 
 ```cpp
-virtual Answer CommandClause(Cmd c, Resumption<typename Cmd::OutType, Answer> r);
+virtual Answer CommandClause(Cmd, Resumption<typename Cmd::template ResumptionType<Answer>>) = 0;
 ```
 
 A handler handles a particular command `Cmd` if it inherits from `CmdClause<..., Cmd>` and overrides `CommandClause` with the "interpretation" of the command.
 
 - `Cmd c` - The handled command. The object `c` contains "arguments" of the command. When a handler inherits from a number of `CmdClause`'s, the right clause is chosen via the overloading resolution mechanism out of the overloads of `CommandClauses` in the handler based on the type `Cmd`.
 
-- `Resumption<typename Cmd::OutType, Answer> r` - The captured resumption. When the user invokes a command, the control goes back to the handler and the computation delimited by the handler is captured as the resumption `r`. Since resumptions are one-shot, when we resume `r`, we have to give up the ownership of `r`, which makes `r` invalid.
+- `Resumption<typename Cmd::template ResumptionType<Answer>> r` - The captured resumption. When the user invokes a command, the control goes back to the handler and the computation delimited by the handler is captured as the resumption `r`. Since resumptions are one-shot, when we resume `r`, we have to give up the ownership of `r`, which makes `r` invalid.
 
 - **return value** `Answer` - The overall result of handling the computation.
 
@@ -467,11 +501,11 @@ public:
   Reader(int val) : val(val) { }
 private:
   int val;
-  T CommandClause(Ask, Resumption<int, T> r) override
+  T CommandClause(Ask, Resumption<T(int)> r) override
   {
     return std::move(r).Resume(val);
   }
-  T CommandClause(AddOneMoreHandler, Resumption<void, T> r) override
+  T CommandClause(AddOneMoreHandler, Resumption<T()> r) override
   {
     return OneShot::Handle<Reader<void>>(300, [r = r.Release()]() {
       Resumption res(r);
@@ -563,35 +597,35 @@ public:
   // Wrap a computation in a handler, but don't execute it. Instead, return a resumption.
   
   template <typename H, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     std::function<typename H::BodyType()> body, Args&&... args);
 
   template <typename H, typename A, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     std::function<typename H::BodyType(A)> body, Args&&... args);
   
   template <typename H, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
 
   template <typename H, typename A, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     int64_t label, std::function<typename H::BodyType(A)> body, Args&&... args);
 	
   template <typename H>
-  static Resumption<void, typename H::AnswerType> WrapWith(
+  static Resumption<typename H::AnswerType()> WrapWith(
     std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 
   template <typename H, typename A>
-  static Resumption<void, typename H::AnswerType> WrapWith(
+  static Resumption<typename H::AnswerType()> WrapWith(
     std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler);
   
   template <typename H>
-  static Resumption<void, typename H::AnswerType> WrapWith(
+  static Resumption<typename H::AnswerType()> WrapWith(
     int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 
   template <typename H, typename A>
-  static Resumption<void, typename H::AnswerType> WrapWith(
+  static Resumption<typename H::AnswerType()> WrapWith(
     int64_t label, std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler);
 
   // Invoke a command:
@@ -785,19 +819,19 @@ Wraps a computation in a handler, but doesn't execute it. Instead, the computati
 
 ```cpp
   template <typename H, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     std::function<typename H::BodyType()> body, Args&&... args)
 
   template <typename H, typename A, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     std::function<typename H::BodyType(A)> body, Args&&... args)
   
   template <typename H, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     int64_t label, std::function<typename H::BodyType()> body, Args&&... args);
 
   template <typename H, typename A, typename... Args>
-  static Resumption<void, typename H::AnswerType> Wrap(
+  static Resumption<typename H::AnswerType()> Wrap(
     int64_t label, std::function<typename H::BodyType(A)> body, Args&&... args);
 ```
 
@@ -810,7 +844,7 @@ OneShot::Wrap<H>(foo)
 is equivalent to
 
 ```cpp
-Resumption<void, T>([=](){ return OneShot::Handle<H>(foo); })
+Resumption<T()>([=](){ return OneShot::Handle<H>(foo); })
 ```
 
 If the function has an argument, it becomes the `Out` type of the resumption. That is, for a function `std::function<T(A)> foo`, the expression
@@ -822,7 +856,7 @@ OneShot::Wrap<H>(foo)
 is equivalent to
 
 ```cpp
-Resumption<A, T>([=](A a){ return OneShot::Handle<H>(std::bind(foo, a)); })
+Resumption<T(A)>([=](A a){ return OneShot::Handle<H>(std::bind(foo, a)); })
 ```
 
 #### :large_orange_diamond: OneShot::WrapWith
@@ -831,19 +865,19 @@ Version of `OneShot::Wrap` with a specified handler object.
 
 ```cpp
 template <typename H>
-static Resumption<void, typename H::AnswerType> WrapWith(
+static Resumption<typename H::AnswerType()> WrapWith(
   std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
 
 template <typename H, typename A>
-static Resumption<void, typename H::AnswerType> WrapWith(
+static Resumption<typename H::AnswerType()> WrapWith(
   std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler)
   
 template <typename H>
-static Resumption<void, typename H::AnswerType> WrapWith(
+static Resumption<typename H::AnswerType()> WrapWith(
   int64_t label, std::function<typename H::BodyType()> body, std::shared_ptr<H> handler);
 
 template <typename H, typename A>
-static Resumption<void, typename H::AnswerType> WrapWith(
+static Resumption<typename H::AnswerType()> WrapWith(
   int64_t label, std::function<typename H::BodyType(A)> body, std::shared_ptr<H> handler);
 ```
 

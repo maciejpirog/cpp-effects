@@ -72,11 +72,11 @@ public:
   State(int initialState) : state(initialState) { }
 private:
   int state;
-  T CommandClause(Get, Resumption<int, T> r) override
+  T CommandClause(Get, Resumption<T(int)> r) override
   {
     return std::move(r).TailResume(state);
   }
-  T CommandClause(Put p, Resumption<void, T> r) override
+  T CommandClause(Put p, Resumption<T()> r) override
   {
     state = p.newState;
     return std::move(r).TailResume();
@@ -115,11 +115,11 @@ We can *resume* (or *continue* as it is called in Multicore OCaml) a resumption 
 
 ```cpp
 template <typename Out, typename Answer>
-static Answer Resumption<Out, Answer>::Resume(Out cmdResult) &&;
+static Answer Resumption<Answer(Out)>::Resume(Out cmdResult) &&;
 
-// specialisation for Out = void
+// or
 template <typename Answer>
-static Answer Resumption<void, Answer>::Resume() &&;
+static Answer Resumption<Answer()>::Resume() &&;
 ```
 
 Resumptions in our library are one-shot, which means that you can resume each one at most once. This is not only a technical matter, but more importantly it is in accordance with RAII: objects are destructed during unwinding of the stack, and so in principle you don't want to unwind the same stack twice. This is somewhat enforced by the fact that `Resumption` is movable, but not copyable. The handler is given the "ownership" of the resumption (the `Resumption` class is actually a form of a smart pointer), but if we want to resume, we need to give up the ownership of the resumption. After this, the resumption becomes invalid, and so the user should not use it again.

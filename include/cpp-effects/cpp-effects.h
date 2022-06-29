@@ -106,8 +106,7 @@ private:
 };
 
 template <typename Out, typename Answer>
-class Resumption<Answer(Out)>
-{
+class Resumption<Answer(Out)> {
   friend class OneShot;
 public:
   Resumption() { }
@@ -164,8 +163,7 @@ private:
 };
 
 template <typename Answer>
-class Resumption<Answer()>
-{
+class Resumption<Answer()> {
   friend class OneShot;
 public:
   Resumption() { }

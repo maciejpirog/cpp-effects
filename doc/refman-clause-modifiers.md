@@ -12,8 +12,8 @@ struct OtherCmd : Command<> { };
 
 class MyHandler : public Handler <char, void, NoResume<MyCmd>, OtherCmd> {
   ...
-  char CommandClause(OtherCmd, Resumption<void, char>) { ... }  // regular clause
-  char CommandClause(MyCmd) { ... }                             // no resumption
+  char CommandClause(OtherCmd, Resumption<char()>) { ... }  // regular clause
+  char CommandClause(MyCmd) { ... }                         // no resumption
 };
 ```
 
@@ -146,7 +146,7 @@ struct NoManage { };
 template <typename Answer, typename Cmd>
 class CmdClause<Answer, NoManage<Cmd>> {
 protected:
-  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::OutType, Answer>) = 0;
+  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::template ResumptionType<Answer>>) = 0;
 };
 ```
 
