@@ -63,9 +63,7 @@ using MetaframePtr = std::shared_ptr<Metaframe>;
 // --------
 
 template <typename... Outs>
-struct Command {
-  using OutType = std::tuple<Outs...>;
-};
+struct Command;
 
 template <typename Out>
 struct Command<Out> {
@@ -104,8 +102,6 @@ private:
   Answer Resume();
   virtual void TailResume() override;
 };
-
-// todo: What's the best way to minimise code duplication in different specialisations?
 
 template <typename Out, typename Answer>
 class Resumption
@@ -220,75 +216,6 @@ public:
   Answer TailResume() &&;
 private:
   ResumptionData<void, Answer>* data = nullptr;
-};
-
-
-template <typename Answer, typename... Outs>
-class Resumption<std::tuple<Outs...>, Answer>
-{
-  friend class OneShot;
-public:
-  Resumption() { }
-  Resumption(ResumptionData<std::tuple<Outs...>, Answer>* data) : data(data) { }
-  Resumption(ResumptionData<std::tuple<Outs...>, Answer>& data) : data(&data) { }
-  Resumption(std::function<Answer(std::tuple<Outs...>)>);
-  Resumption(const Resumption<std::tuple<Outs...>, Answer>&) = delete;
-  Resumption(Resumption<std::tuple<Outs...>, Answer>&& other)
-  {
-    data = other.data;
-    other.data = nullptr;
-  }
-  Resumption& operator=(const Resumption<std::tuple<Outs...>, Answer>&) = delete;
-  Resumption& operator=(Resumption<std::tuple<Outs...>, Answer>&& other)
-  {
-    if (this != &other) {
-      data = other.data;
-      other.data = nullptr;
-    }
-    return *this;
-  }
-  ~Resumption()
-  {
-    if (data) {
-      data->cmdResultTransfer = {};
-
-      // We move the resumption buffer out of the metaframe to break
-      // the pointer/stack cycle.
-      std::list<MetaframePtr> _(std::move(data->storedMetastack));
-    }
-  }
-  explicit operator bool() const
-  {
-    return data != nullptr && (bool)data->storedMetastack.back().fiber;
-  }
-  bool operator!() const
-  {
-    return data == nullptr || !data->storedMetastack.back().fiber;
-  }
-  ResumptionData<std::tuple<Outs...>, Answer>* Release()
-  {
-    auto d = data;
-    data = nullptr;
-    return d;
-  }
-  Answer Resume(std::tuple<Outs...> cmdResult) &&
-  {
-    data->cmdResultTransfer->value = std::move(cmdResult);
-    return Release()->Resume();
-  }
-  Answer Resume(Outs... cmdResults) &&
-  {
-    return std::move(*this).Resume(
-      std::make_tuple<Outs...>(std::forward<Outs>(cmdResults)...));
-  }
-  Answer TailResume(std::tuple<Outs...> cmdResult) &&;
-  Answer TailResume(Outs... cmdResults) &&
-  {
-    return std::move(*this).TailResume(
-      std::make_tuple<Outs...>(std::forward<Outs>(cmdResults)...));
-  }
-private:
-  ResumptionData<std::tuple<Outs...>, Answer>* data = nullptr;
 };
 
 // ----------
@@ -950,17 +877,6 @@ Answer Resumption<Out, Answer>::TailResume(Out cmdResult) &&
 template <typename Answer>
 Answer Resumption<void, Answer>::TailResume() &&
 {
-  // Trampoline back to Handle
-  OneShot::tailAnswer() = TailAnswer{Release()};
-  if constexpr (!std::is_void<Answer>::value) {
-    return Answer();
-  }
-}
-
-template <typename Answer, typename... Outs>
-Answer Resumption<std::tuple<Outs...>, Answer>::TailResume(std::tuple<Outs...> cmdResult) &&
-{
-  data->cmdResultTransfer->value = std::move(cmdResult);
   // Trampoline back to Handle
   OneShot::tailAnswer() = TailAnswer{Release()};
   if constexpr (!std::is_void<Answer>::value) {
