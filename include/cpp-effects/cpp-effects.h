@@ -62,7 +62,9 @@ using MetaframePtr = std::shared_ptr<Metaframe>;
 // --------
 
 template <typename... Outs>
-struct Command;
+struct Command {
+  using OutType = std::tuple<Outs...>;
+};
 
 template <typename Out>
 struct Command<Out> {
@@ -73,7 +75,6 @@ template <>
 struct Command<> {
   using OutType = void;
 };
-
 
 // -----------
 // Resumptions
@@ -102,6 +103,8 @@ private:
   Answer Resume();
   virtual void TailResume() override;
 };
+
+// todo: What's the best way to minimise code duplication in different specialisations?
 
 template <typename Out, typename Answer>
 class Resumption
@@ -216,6 +219,70 @@ public:
   Answer TailResume() &&;
 private:
   ResumptionData<void, Answer>* data = nullptr;
+};
+
+
+template <typename Answer, typename... Outs>
+class Resumption<std::tuple<Outs...>, Answer>
+{
+  friend class OneShot;
+public:
+  Resumption() { }
+  Resumption(ResumptionData<std::tuple<Outs...>, Answer>* data) : data(data) { }
+  Resumption(ResumptionData<std::tuple<Outs...>, Answer>& data) : data(&data) { }
+  Resumption(std::function<Answer(std::tuple<Outs...>)>);
+  Resumption(const Resumption<std::tuple<Outs...>, Answer>&) = delete;
+  Resumption(Resumption<std::tuple<Outs...>, Answer>&& other)
+  {
+    data = other.data;
+    other.data = nullptr;
+  }
+  Resumption& operator=(const Resumption<std::tuple<Outs...>, Answer>&) = delete;
+  Resumption& operator=(Resumption<std::tuple<Outs...>, Answer>&& other)
+  {
+    if (this != &other) {
+      data = other.data;
+      other.data = nullptr;
+    }
+    return *this;
+  }
+  ~Resumption()
+  {
+    if (data) {
+      data->cmdResultTransfer = {};
+
+      // We move the resumption buffer out of the metaframe to break
+      // the pointer/stack cycle.
+      std::list<MetaframePtr> _(std::move(data->storedMetastack));
+    }
+  }
+  explicit operator bool() const
+  {
+    return data != nullptr && (bool)data->storedMetastack.back().fiber;
+  }
+  bool operator!() const
+  {
+    return data == nullptr || !data->storedMetastack.back().fiber;
+  }
+  ResumptionData<std::tuple<Outs...>, Answer>* Release()
+  {
+    auto d = data;
+    data = nullptr;
+    return d;
+  }
+  Answer Resume(std::tuple<Outs...> cmdResult) &&
+  {
+    data->cmdResultTransfer->value = std::move(cmdResult);
+    return Release()->Resume();
+  }
+  Answer Resume(Outs... cmdResults) &&
+  {
+    data->cmdResultTransfer->value = std::make_tuple<Outs...>(std::forward<Outs>(cmdResults)...);
+    return Release()->Resume();
+  }
+  Answer TailResume(std::tuple<Outs...> cmdResult) &&;
+private:
+  ResumptionData<std::tuple<Outs...>, Answer>* data = nullptr;
 };
 
 // ----------

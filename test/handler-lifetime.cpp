@@ -4,18 +4,6 @@
 
 // Test: We print out the lifecycle of a handler.
 
-// There are two places where handler can die:
-// 
-// - After the return clause, where the metaframe no longer kept on
-//   the metastack (Metastack().pop_back() in
-//   OneShot::HandleWith(int64_t, ...)
-//
-// - After a resumption that holds a pointer (in storedMetastack) dies.
-//
-// But there's no telling which happens first, so handlers are managed
-// via shared_ptrs (unless the user does something evil with the
-// pointers outside the effect handler library, no cycles appear).
-
 #include <functional>
 #include <iostream>
 
