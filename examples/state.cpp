@@ -33,28 +33,28 @@ to the current reader and Abet.
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // -----------------------------------
 // Commands and programmer's interface
 // -----------------------------------
 
 template <typename S>
-struct Put : Command<> {
+struct Put : eff::command<> {
   S newState;
 };
 
 template <typename S>
-struct Get : Command<S> { };
+struct Get : eff::command<S> { };
 
 template <typename S>
 void put(S s) {
-  OneShot::InvokeCmd(Put<S>{{}, s});
+  eff::invoke_command(Put<S>{{}, s});
 }
 
 template <typename S>
 S get() {
-  return OneShot::InvokeCmd(Get<S>{});
+  return eff::invoke_command(Get<S>{});
 }
 
 // ----------------------
@@ -85,16 +85,16 @@ std::string test2()
 // -------------------
 
 template <typename Answer, typename S>
-class HStateful : public FlatHandler<Answer, Plain<Put<S>>, Plain<Get<S>>> {
+class HStateful : public eff::flat_handler<Answer, eff::plain<Put<S>>, eff::plain<Get<S>>> {
 public:
   HStateful(S initialState) : state(initialState) { }
 private:
   S state;
-  void CommandClause(Put<S> p) final override
+  void handle_command(Put<S> p) final override
   {
     state = p.newState;
   }
-  S CommandClause(Get<S>) final override
+  S handle_command(Get<S>) final override
   {
     return state;
   }
@@ -104,8 +104,8 @@ private:
 
 void testStateful()
 {
-  OneShot::Handle<HStateful<void, int>>(test, 100);
-  std::cout << OneShot::Handle<HStateful<std::string, int>>(test2, 100);
+  eff::handle<HStateful<void, int>>(test, 100);
+  std::cout << eff::handle<HStateful<std::string, int>>(test2, 100);
   std::cout << std::endl;
 
   // Output:
@@ -119,44 +119,44 @@ void testStateful()
 // ----------------------
 
 template <typename Answer, typename S>
-class HLambda : public Handler<std::function<Answer(S)>, Answer, Put<S>, Get<S>> {
-  std::function<Answer(S)> CommandClause(Put<S> p,
-    Resumption<std::function<Answer(S)>()> r) override
+class HLambda : public eff::handler<std::function<Answer(S)>, Answer, Put<S>, Get<S>> {
+  std::function<Answer(S)> handle_command(Put<S> p,
+    eff::resumption<std::function<Answer(S)>()> r) override
   {
-    return [p, r = r.Release()](S) -> Answer {
-      return Resumption<std::function<Answer(S)>()>(r).Resume()(p.newState);
+    return [p, r = r.release()](S) -> Answer {
+      return eff::resumption<std::function<Answer(S)>()>(r).resume()(p.newState);
     };
   }
-  std::function<Answer(S)> CommandClause(Get<S>,
-    Resumption<std::function<Answer(S)>(S)> r) override
+  std::function<Answer(S)> handle_command(Get<S>,
+    eff::resumption<std::function<Answer(S)>(S)> r) override
   {
-    return [r = r.Release()](S s) -> Answer {
-      return Resumption<std::function<Answer(S)>(S)>(r).Resume(s)(s);
+    return [r = r.release()](S s) -> Answer {
+      return eff::resumption<std::function<Answer(S)>(S)>(r).resume(s)(s);
     };
   }
-  std::function<Answer(S)> ReturnClause(Answer a) override
+  std::function<Answer(S)> handle_return(Answer a) override
   {
     return [a](S){ return a; };
   }
 };
 
 template <typename S>
-class HLambda<void, S> : public Handler<std::function<void(S)>, void, Put<S>, Get<S>> {
-  std::function<void(S)> CommandClause(Put<S> p,
-    Resumption<std::function<void(S)>()> r) override
+class HLambda<void, S> : public eff::handler<std::function<void(S)>, void, Put<S>, Get<S>> {
+  std::function<void(S)> handle_command(Put<S> p,
+    eff::resumption<std::function<void(S)>()> r) override
   {
-    return [r = r.Release(), p](S) -> void {
-      Resumption<std::function<void(S)>()>(r).Resume()(p.newState);
+    return [r = r.release(), p](S) -> void {
+      eff::resumption<std::function<void(S)>()>(r).resume()(p.newState);
     };
   }
-  std::function<void(S)> CommandClause(Get<S>,
-    Resumption<std::function<void(S)>(S)> r) override
+  std::function<void(S)> handle_command(Get<S>,
+    eff::resumption<std::function<void(S)>(S)> r) override
   {
-    return [r = r.Release()](S s) -> void {
-      Resumption<std::function<void(S)>(S)>(r).Resume(s)(s);
+    return [r = r.release()](S s) -> void {
+      eff::resumption<std::function<void(S)>(S)>(r).resume(s)(s);
     };
   }
-  std::function<void(S)> ReturnClause() override
+  std::function<void(S)> handle_return() override
   {
     return [](S){ };
   }
@@ -164,8 +164,8 @@ class HLambda<void, S> : public Handler<std::function<void(S)>, void, Put<S>, Ge
 
 void testLambda()
 {
-  OneShot::Handle<HLambda<void, int>>(test)(100);
-  std::cout << OneShot::Handle<HLambda<std::string, int>>(test2)(100);
+  eff::handle<HLambda<void, int>>(test)(100);
+  std::cout << eff::handle<HLambda<std::string, int>>(test2)(100);
   std::cout << std::endl;
 
   // Output:
@@ -181,59 +181,59 @@ void testLambda()
 class Bottom { Bottom() = delete; };
 
 template <typename H>
-struct CmdAid : Command<Bottom> {
+struct CmdAid : eff::command<Bottom> {
   std::shared_ptr<H> han;
-  ResumptionData<void, typename H::BodyType>* res;
+  eff::resumption_data<void, typename H::body_type>* res;
 };
 
 template <typename H>
-struct CmdAbet : Command<> {
+struct CmdAbet : eff::command<> {
   std::shared_ptr<H> han;
 };
 
 template <typename H>
-class Aid : public Handler<typename H::AnswerType, typename H::AnswerType, CmdAid<H>> {
-  typename H::AnswerType CommandClause(CmdAid<H> c, Resumption<typename H::AnswerType(Bottom)>) override {
-    return OneShot::Handle<Aid<H>>([=](){
-      return OneShot::HandleWith([=](){
-        return Resumption<typename H::BodyType()>(c.res).Resume();
+class Aid : public eff::handler<typename H::answer_type, typename H::answer_type, CmdAid<H>> {
+  typename H::answer_type handle_command(CmdAid<H> c, eff::resumption<typename H::answer_type(Bottom)>) override {
+    return eff::handle<Aid<H>>([=](){
+      return eff::handle_with([=](){
+        return eff::resumption<typename H::body_type()>(c.res).resume();
       }, c.han);
     });
   }
-  typename H::AnswerType ReturnClause(typename H::AnswerType a) override
+  typename H::answer_type handle_return(typename H::answer_type a) override
   {
     return a;
   }
 }; 
 
 template <typename H>
-class Abet : public Handler<typename H::BodyType, typename H::BodyType, CmdAbet<H>> {
-  [[noreturn]] typename H::BodyType CommandClause(CmdAbet<H> c, Resumption<typename H::BodyType()> r) override {
-    OneShot::InvokeCmd(CmdAid<H>{{}, c.han, r.Release()});
+class Abet : public eff::handler<typename H::body_type, typename H::body_type, CmdAbet<H>> {
+  [[noreturn]] typename H::body_type handle_command(CmdAbet<H> c, eff::resumption<typename H::body_type()> r) override {
+    eff::invoke_command(CmdAid<H>{{}, c.han, r.release()});
     exit(-1); // This will never be reached
   }
-  typename H::BodyType ReturnClause(typename H::BodyType b) override
+  typename H::body_type handle_return(typename H::body_type b) override
   {
     return b;
   }
 };
 
 template <typename H>
-typename H::AnswerType SwappableHandleWith(std::function<typename H::BodyType()> body, std::shared_ptr<H> handler)
+typename H::answer_type SwappableHandleWith(std::function<typename H::body_type()> body, std::shared_ptr<H> handler)
 {
-  return OneShot::Handle<Aid<H>>([=](){
-    return OneShot::HandleWith([=](){
-        return OneShot::Handle<Abet<H>>(body);
+  return eff::handle<Aid<H>>([=](){
+    return eff::handle_with([=](){
+        return eff::handle<Abet<H>>(body);
       },
       std::move(handler));
   });
 }
 
 template <typename T>
-struct Read : Command<T> { };
+struct Read : eff::command<T> { };
 
 template <typename Answer, typename R>
-using ReaderType = Handler<Answer, Answer, Read<R>>;
+using ReaderType = eff::handler<Answer, Answer, Read<R>>;
 
 template <typename Answer, typename R>
 class Reader : public ReaderType<Answer, R> {
@@ -241,29 +241,29 @@ public:
   Reader(R val) : val(val) { }
 private:
   const R val;  // Note the const modifier!
-  Answer CommandClause(Read<R>, Resumption<Answer(int)> r) override
+  Answer handle_command(Read<R>, eff::resumption<Answer(int)> r) override
   {
-    return std::move(r).TailResume(val);
+    return std::move(r).tail_resume(val);
   }
-  Answer ReturnClause(Answer b) override
+  Answer handle_return(Answer b) override
   {
     return b;
   }
 };
 
 template<typename Answer, typename S>
-class HSwitching : public Handler<Answer, Answer, Put<S>, Get<S>> {
-  Answer CommandClause(Put<S> p, Resumption<Answer()> r) override
+class HSwitching : public eff::handler<Answer, Answer, Put<S>, Get<S>> {
+  Answer handle_command(Put<S> p, eff::resumption<Answer()> r) override
   {
-    OneShot::InvokeCmd(
+    eff::invoke_command(
       CmdAbet<ReaderType<Answer, S>>{{}, std::make_shared<Reader<Answer, S>>(p.newState)});
-    return std::move(r).Resume();
+    return std::move(r).resume();
   }
-  Answer CommandClause(Get<S>, Resumption<Answer(S)> r) override
+  Answer handle_command(Get<S>, eff::resumption<Answer(S)> r) override
   {
-    return std::move(r).Resume(OneShot::InvokeCmd(Read<S>{}));
+    return std::move(r).resume(eff::invoke_command(Read<S>{}));
   }
-  Answer ReturnClause(Answer a) override
+  Answer handle_return(Answer a) override
   {
     return a;
   }
@@ -274,7 +274,7 @@ class HSwitching : public Handler<Answer, Answer, Put<S>, Get<S>> {
 void testSwitching()
 {
   std::cout << SwappableHandleWith(
-    [](){ return OneShot::Handle<HSwitching<std::string, int>>(test2); },
+    [](){ return eff::handle<HSwitching<std::string, int>>(test2); },
     std::shared_ptr<ReaderType<std::string, int>>(new Reader<std::string, int>(100)));
 
   std::cout << std::endl;

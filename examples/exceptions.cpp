@@ -10,7 +10,8 @@
 
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
-using namespace CppEffects;
+
+namespace eff = cpp_effects;
 
 // ------------------------
 // Exceptions and a handler
@@ -20,22 +21,22 @@ using namespace CppEffects;
 // handler, which handles an exception by returning a value specified
 // in the constructor.
 
-struct Error : Command<> { };
+struct Error : eff::command<> { };
 
 template <typename T>
 [[noreturn]] T error()
 {
-  OneShot::InvokeCmd(Error{});
+  eff::invoke_command(Error{});
   exit(-1); // This will never happen!
 }
 
 template <typename T>
-class WithDefault : public FlatHandler<T, Error> {
+class WithDefault : public eff::flat_handler<T, Error> {
 public:
   WithDefault(const T& t) : defaultVal(t) { }
 private:
   const T defaultVal;
-  T CommandClause(Error, Resumption<T()>) override
+  T handle_command(Error, eff::resumption<T()>) override
   {
     return defaultVal;
   }
@@ -51,7 +52,7 @@ private:
 
 int product(const std::vector<int>& v)
 {
-  return OneShot::Handle<WithDefault<int>>(
+  return eff::handle<WithDefault<int>>(
     [&v]() {
       int r = 1;
       for (auto i : v) {

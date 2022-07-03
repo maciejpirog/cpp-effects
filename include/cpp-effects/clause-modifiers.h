@@ -13,24 +13,24 @@
 // handler. For example, we can specify that a particular handler will
 // not need the resumption:
 //
-// struct MyCmd : Command<int> { };
-// struct OtherCmd : Command<void> { };
-// class MyHandler : public Handler <char, void, NoResume<MyCmd>>, OtherCmd> {
-//   char CommandClause(MyCmd) override { ... }
+// struct MyCmd : command<int> { };
+// struct OtherCmd : command<> { };
+// class MyHandler : public handler<char, void, no_resume<MyCmd>>, OtherCmd> {
+//   char handle_command(MyCmd) override { ... }
 // };
 //
-// Note that because we used the NoResume modifier, the type of
-// CommandClause for MyCmd is now different.
+// Note that because we used the no_resume modifier, the type of
+// handle_command for MyCmd is now different.
 
 #ifndef CPP_EFFECTS_CLAUSE_MODIFIERS_H
 #define CPP_EFFECTS_CLAUSE_MODIFIERS_H
 
 #include "cpp-effects/cpp-effects.h"
 
-namespace CppEffects {
+namespace cpp_effects {
 
 // -----
-// Plain
+// plain
 // -----
 
 // Specialisation for plain clauses, which interpret commands as
@@ -38,87 +38,95 @@ namespace CppEffects {
 // switching, no allocation of resumption.
 
 template <typename Cmd>
-struct Plain { };
+struct plain { };
+
+namespace cpp_effects_internals {
 
 template <typename Answer, typename Cmd>
-class CmdClause<Answer, Plain<Cmd>> : public CanInvokeCmdClause<Cmd> {
-  friend class OneShot;
-  template <typename, typename, typename...> friend class Handler;
+class command_clause<Answer, plain<Cmd>> : public can_invoke_command<Cmd> {
+  template <typename, typename, typename...> friend class ::cpp_effects::handler;
+  template <typename, typename...> friend class ::cpp_effects::flat_handler;
 protected:
-  virtual typename Cmd::OutType CommandClause(Cmd) = 0;
+  virtual typename Cmd::out_type handle_command(Cmd) = 0;
 private:
-  virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframePtr>::iterator it, const Cmd& cmd) final override
+  virtual typename Cmd::out_type invoke_command(
+    std::list<metaframe_ptr>::iterator it, const Cmd& cmd) final override
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
-    std::list<MetaframePtr> storedMetastack;
-    storedMetastack.splice(
-      storedMetastack.begin(), OneShot::Metastack, OneShot::Metastack.begin(), it);
+    std::list<metaframe_ptr> stored_metastack;
+    stored_metastack.splice(
+      stored_metastack.begin(), metastack, metastack.begin(), it);
     // at this point: metastack = [a][b][c]; stored stack = [d][e][f][g.]
-    std::swap(storedMetastack.front()->fiber, OneShot::Metastack.front()->fiber);
+    std::swap(stored_metastack.front()->fiber, metastack.front()->fiber);
     // at this point: metastack = [a][b][c.]; stored stack = [d][e][f][g]
 
-    if constexpr (!std::is_void<typename Cmd::OutType>::value) {
-      typename Cmd::OutType a(CommandClause(cmd));
-      std::swap(storedMetastack.front()->fiber, OneShot::Metastack.front()->fiber);
+    if constexpr (!std::is_void<typename Cmd::out_type>::value) {
+      typename Cmd::out_type a(handle_command(cmd));
+      std::swap(stored_metastack.front()->fiber, metastack.front()->fiber);
       // at this point: metastack = [a][b][c]; stored stack = [d][e][f][g.]
-      OneShot::Metastack.splice(OneShot::Metastack.begin(), storedMetastack);
+      metastack.splice(metastack.begin(), stored_metastack);
       // at this point: metastack = [a][b][c][d][e][f][g.]
       return a;
     } else {
-      CommandClause(cmd);
-      std::swap(storedMetastack.front()->fiber, OneShot::Metastack.front()->fiber);
-      OneShot::Metastack.splice(OneShot::Metastack.begin(), storedMetastack);
+      handle_command(cmd);
+      std::swap(stored_metastack.front()->fiber, metastack.front()->fiber);
+      metastack.splice(metastack.begin(), stored_metastack);
     }
   }
 };
 
-// --------
-// NoResume
-// --------
+} // namespace cpp_effects_internals
+
+// ---------
+// no_resume
+// ---------
 
 // Specialisation for command clauses that do not use the
 // resumption. This is useful for handlers that behave like exception
 // handlers or terminate the "current thread".
 
 template <typename Cmd>
-struct NoResume { };
+struct no_resume { };
+
+namespace cpp_effects_internals {
 
 template <typename Answer, typename Cmd>
-class CmdClause<Answer, NoResume<Cmd>> : public CanInvokeCmdClause<Cmd> {
-  friend class OneShot;
-  template <typename, typename, typename...> friend class Handler;
+class command_clause<Answer, no_resume<Cmd>> : public can_invoke_command<Cmd> {
+  template <typename, typename, typename...> friend class ::cpp_effects::handler;
+  template <typename, typename...> friend class ::cpp_effects::flat_handler;
 protected:
-  virtual Answer CommandClause(Cmd) = 0;
+  virtual Answer handle_command(Cmd) = 0;
 private:
-  [[noreturn]] virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframePtr>::iterator it, const Cmd& cmd) final override
+  [[noreturn]] virtual typename Cmd::out_type InvokeCmd(
+    std::list<metaframe_ptr>::iterator it, const Cmd& cmd) final override
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
-    OneShot::Metastack.erase(OneShot::Metastack.begin(), it);
+    metastack.erase(metastack.begin(), it);
     // at this point: metastack = [a][b][c]
 
-    std::move(OneShot::Metastack.front()->fiber).resume_with([&](ctx::fiber&& /*prev*/) -> ctx::fiber {
+    std::move(metastack.front()->fiber).resume_with([&](ctx::fiber&& /*prev*/) -> ctx::fiber {
       if constexpr (!std::is_void<Answer>::value) {
-        *(static_cast<std::optional<Answer>*>(OneShot::Metastack.front()->returnBuffer)) =
-          this->CommandClause(cmd);
+        *(static_cast<std::optional<Answer>*>(metastack.front()->returnBuffer)) =
+          this->handle_command(cmd);
       } else {
-        this->CommandClause(cmd);
+        this->handle_command(cmd);
       }
       return ctx::fiber();
     });
 
     // The current fiber is gone (because prev in the above goes out
     // of scope and is deleted), so this will never be reached.
-    std::cerr << "Malformed NoResume handler" << std::endl;
-    OneShot::DebugPrintMetastack();
+    std::cerr << "Malformed no_resume handler" << std::endl;
+    debug_print_metastack();
     exit(-1);
   }
 };
 
-// --------
-// NoManage
-// --------
+} // namespace cpp_effects_internals
+
+// ---------
+// no_manage
+// ---------
 
 // Specialisation for handlers that either:
 //
@@ -126,48 +134,50 @@ private:
 //   command clauses),
 // - Don't access the handler object after resume,
 //
-// which amounts to almost all practical uses of handlers. "NoManage"
+// which amounts to almost all practical uses of handlers. "no_manage"
 // clause does not participate in the reference counting of handlers,
 // saving a tiny bit of performance. The interface is exactly as in a
 // regular command clause.
 //
-// Plain and NoResume clauses are automaticslly NoManage.
+// Plain and no_resume clauses are automaticslly no_manage.
 
 template <typename Cmd>
-struct NoManage { };
+struct no_manage { };
+
+namespace cpp_effects_internals {
 
 template <typename Answer, typename Cmd>
-class CmdClause<Answer, NoManage<Cmd>> : public CanInvokeCmdClause<Cmd> {
-  friend class OneShot;
-  template <typename, typename, typename...> friend class Handler;
+class command_clause<Answer, no_manage<Cmd>> : public can_invoke_command<Cmd> {
+  template <typename, typename, typename...> friend class ::cpp_effects::handler;
+  template <typename, typename...> friend class ::cpp_effects::flat_handler;
 protected:
-  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::template ResumptionType<Answer>>) = 0;
+  virtual Answer handle_command(Cmd, ::cpp_effects::resumption<typename Cmd::template resumptionType<Answer>>) = 0;
 private:
-  virtual typename Cmd::OutType InvokeCmd(
-    std::list<MetaframePtr>::iterator it, const Cmd& cmd) final override
+  virtual typename Cmd::out_type InvokeCmd(
+    std::list<metaframe_ptr>::iterator it, const Cmd& cmd) final override
   {
-    using Out = typename Cmd::OutType;
+    using Out = typename Cmd::out_type;
 
     // (continued from OneShot::InvokeCmd) ...looking for [d]
-    ResumptionData<Out, Answer>& resumption = this->resumptionBuffer;
-    resumption.storedMetastack.splice(
-      resumption.storedMetastack.begin(), OneShot::Metastack, OneShot::Metastack.begin(), it);
+    resumption_data<Out, Answer>& resumption = this->resumptionBuffer;
+    resumption.stored_metastack.splice(
+      resumption.stored_metastack.begin(), metastack, metastack.begin(), it);
     // at this point: [a][b][c]; stored stack = [d][e][f][g.] 
 
-    std::move(OneShot::Metastack.front()->fiber).resume_with([&](ctx::fiber&& prev) ->
+    std::move(metastack.front()->fiber).resume_with([&](ctx::fiber&& prev) ->
         ctx::fiber {
       // at this point: [a][b][c.]; stored stack = [d][e][f][g.]
-      resumption.storedMetastack.front()->fiber = std::move(prev);
+      resumption.stored_metastack.front()->fiber = std::move(prev);
       // at this point: [a][b][c.]; stored stack = [d][e][f][g]
 
       // We don't need to keep the handler alive for the duration of the command clause call
-      // (compare CmdClause<Answer, Cmd>::InvokeCmd)
+      // (compare command_clause<Answer, Cmd>::InvokeCmd)
 
       if constexpr (!std::is_void<Answer>::value) {
-        *(static_cast<std::optional<Answer>*>(OneShot::Metastack.front()->returnBuffer)) =
-          this->CommandClause(cmd, Resumption<typename Cmd::template ResumptionType<Answer>>(resumption));
+        *(static_cast<std::optional<Answer>*>(metastack.front()->returnBuffer)) =
+          this->handle_command(cmd, ::cpp_effects::resumption<typename Cmd::template resumption_type<Answer>>(resumption));
       } else {
-        this->CommandClause(cmd, Resumption<typename Cmd::template ResumptionType<Answer>>(resumption));
+        this->handle_command(cmd, ::cpp_effects::resumption<typename Cmd::template resumption_type<Answer>>(resumption));
       }
       return ctx::fiber();
     });
@@ -176,16 +186,18 @@ private:
     // being resumed at the moment, and so we no longer need the
     // resumption object.
     if constexpr (!std::is_void<Out>::value) {
-      Out cmdResult = std::move(resumption.cmdResultTransfer->value);
-      resumption.storedMetastack.clear();
-      resumption.cmdResultTransfer = {};
+      Out cmdResult = std::move(resumption.command_result_buffer->value);
+      resumption.stored_metastack.clear();
+      resumption.command_result_buffer = {};
       return cmdResult;
     } else {
-      resumption.storedMetastack.clear();
+      resumption.stored_metastack.clear();
     }
   }
-  ResumptionData<typename Cmd::OutType, Answer> resumptionBuffer;
+  resumption_data<typename Cmd::out_type, Answer> resumptionBuffer;
 };
+
+} // namespace cpp_effects_internals
 
 } // namespace CppEffects
 

@@ -14,70 +14,68 @@
 #include "cpp-effects/cpp-effects.h"
 //#include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // ----------------------------------------
 // Effect intarface for lightweight threads
 // ----------------------------------------
 
-struct Yield : Command<> { };
+struct Yield : eff::command<> { };
 
-struct Fork : Command<> {
+struct Fork : eff::command<> {
   std::function<void()> proc;
 };
 
-struct Kill : Command<> { };
+struct Kill : eff::command<> { };
 
 void yield()
 {
-  OneShot::InvokeCmd(Yield{});
+  eff::invoke_command(Yield{});
 }
 
 void fork(std::function<void()> proc)
 {
-  OneShot::InvokeCmd(Fork{{}, proc});
+  eff::invoke_command(Fork{{}, proc});
 }
 
 void kill()
 {
-  OneShot::InvokeCmd(Kill{});
+  eff::invoke_command(Kill{});
 }
 
 // ---------------------
 // Scheduler for threads
 // ---------------------
 
-using Res = Resumption<void()>;
+using Res = eff::resumption<void()>;
 
-class Scheduler : public Handler<void, void, Yield, Fork, Kill> {
+class Scheduler : public eff::handler<void, void, Yield, Fork, Kill> {
 public:
   static void Start(std::function<void()> f)
   {
-    queue.push_back(OneShot::Wrap<Scheduler>(f));
-    while (!queue.empty()) { // Round-robin scheduling
+    queue.push_back(eff::wrap<Scheduler>(f));
+    
+    while (!queue.empty()) {
       auto resumption = std::move(queue.front());
       queue.pop_front();
-      std::move(resumption).Resume();
+      std::move(resumption).resume();
     }
   }
 private:
   static std::list<Res> queue;
-  static void Run(std::function<void()> f)
-  {
-    OneShot::Handle<Scheduler>(f);
-  }
-  void CommandClause(Yield, Res r) override
-  {
+  
+  void handle_command(Yield, Res r) override {
     queue.push_back(std::move(r));
   }
-  void CommandClause(Fork f, Res r) override
-  {
+  
+  void handle_command(Fork f, Res r) override {
     queue.push_back(std::move(r));
-    queue.push_back(OneShot::Wrap<Scheduler>(f.proc));
-    //queue.push_back({std::bind(Run, f.proc)});
+    queue.push_back(eff::wrap<Scheduler>(f.proc));
   }
-  void CommandClause(Kill, Res) override { }
-  void ReturnClause() override { }
+  
+  void handle_command(Kill, Res) override { }
+  
+  void handle_return() override { }
 };
 
 std::list<Res> Scheduler::queue;
