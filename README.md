@@ -152,11 +152,18 @@ $ cmake .
 $ make
 ```
 
-(On Ubuntu the package is called `libboost-context-dev`.)
-
-You can check that it works by running an example. The following will run the `threads` example - you can see the interleaving of threads in the output:
+You can verify that the build was successful by running an example. The following will run the `threads` example - you can see the interleaving of threads in the output:
 
 ```bash
 $ bin/threads
 01021032104321043210432104321043210432104321432434
 ```
+
+You can also run the examples in a Docker container. Just type the following to build and then run the container shell:
+
+```
+sudo docker build -t cppeff .
+docker run -it --rm -v $(pwd):/home cppeff
+```
+
+In the container shell type `cmake .` and then `make`.
