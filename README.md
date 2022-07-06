@@ -29,62 +29,65 @@ public:
 
 The static member function `Start` initiates the scheduler with `f` as the body of the first thread. It returns when all threads finish their jobs.
 
-To implement this interface, we first define two **commands**, which are data structures used for transferring control from the client code to the handler. We implement `yield` and `fork` to invoke these commands. (The name of the class `OneShot` is supposed to remind the programmer that we're dealing with one-shot handlers only, meaning you cannot resume the same resumption twice). 
+To implement this interface, we first define two **commands**, which are data structures used for transferring control from the client code to the handler. We implement `yield` and `fork` to invoke these commands.
 
 ```cpp
 #include "cpp-effects/cpp-effects.h"
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
-struct Yield : Command<> { };
+struct Yield : eff::command<> { };
 
-struct Fork : Command<> {
+struct Fork : eff::command<> {
   std::function<void()> proc;
 };
 
 void yield()
 {
-  OneShot::InvokeCmd(Yield{});
+  eff::invoke_command(Yield{});
 }
 
 void fork(std::function<void()> proc)
 {
-  OneShot::InvokeCmd(Fork{{}, proc});
+  eff::invoke_command(Fork{{}, proc});
 }
 ```
 
 We define the scheduler, which is a **handler** that can interpret the two commands by pushing the resumptions (i.e., captured continuations) to the queue.
 
 ```cpp
-using Res = Resumption<void()>;
+using Res = eff::resumption<void()>;
 
-class Scheduler : public FlatHandler<void, Yield, Fork> {
+class Scheduler : public eff::handler<void, void, Yield, Fork, Kill> {
 public:
   static void Start(std::function<void()> f)
   {
-    // Create the first thread by wrapping the body in a handler
-    queue.push_back(OneShot::Wrap<Scheduler>(f));
+    queue.push_back(eff::wrap<Scheduler>(f));
     
-    // Round-robin scheduling
     while (!queue.empty()) {
       auto resumption = std::move(queue.front());
       queue.pop_front();
-      std::move(resumption).Resume();
+      std::move(resumption).resume();
     }
   }
 private:
   static std::list<Res> queue;
-  void CommandClause(Yield, Res r) override
-  {
+  
+  void handle_command(Yield, Res r) override {
     queue.push_back(std::move(r));
   }
-  void CommandClause(Fork f, Res r) override
-  {
+  
+  void handle_command(Fork f, Res r) override {
     queue.push_back(std::move(r));
-    queue.push_back(OneShot::Wrap<Scheduler>(f.proc));
+    queue.push_back(eff::wrap<Scheduler>(f.proc));
   }
+  
+  void handle_command(Kill, Res) override { }
+  
+  void handle_return() override { }
 };
 
 std::list<Res> Scheduler::queue;
+
 ```
 
 And that's all it takes! We can now test our library by starting a few threads:
