@@ -71,12 +71,10 @@ public:
   }
 private:
   static std::list<Res> queue;
-  
   void handle_command(Yield, Res r) override
   {
     queue.push_back(std::move(r));
   }
-  
   void handle_command(Fork f, Res r) override
   {
     queue.push_back(std::move(r));
