@@ -128,7 +128,7 @@ The library is header-only, so to use it just include the headers and link with 
 
 You can link with boost using cmake as follows. In your `CMakeLists.txt`, use the following:
 
-```
+```cmake
 FIND_PACKAGE (Boost 1.70 COMPONENTS context REQUIRED)
 
 if (Boost_FOUND)
@@ -161,9 +161,9 @@ $ bin/threads
 
 You can also run the examples in a Docker container. Just type the following to build and then run the container shell:
 
-```
-sudo docker build -t cppeff .
-docker run -it --rm -v $(pwd):/home cppeff
+```bash
+$ sudo docker build -t cppeff .
+$ docker run -it --rm -v $(pwd):/home cppeff
 ```
 
 In the container shell type `cmake .` and then `make`.
