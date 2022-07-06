@@ -32,8 +32,10 @@ when one needs a customised scheduler for lightweight threads.
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
+
 using namespace std::literals::chrono_literals;
+
 namespace chrono = std::chrono;
 
 // ---------
@@ -42,38 +44,38 @@ namespace chrono = std::chrono;
 
 using TimePoint = chrono::time_point<std::chrono::system_clock>;
 
-struct Sleep : Command<> {
+struct Sleep : eff::command<> {
   const chrono::milliseconds time;
 };
 
-struct Fork : Command<> {
+struct Fork : eff::command<> {
   std::function<void()> proc;
   bool background = false;
 };
 
-struct Kill : Command<> { };
+struct Kill : eff::command<> { };
 
 void yield()
 {
-  OneShot::InvokeCmd(Sleep{{}, 0ms});
+  eff::invoke_command(Sleep{{}, 0ms});
 }
 
 void sleep(chrono::milliseconds t)
 {
-  OneShot::InvokeCmd(Sleep{{}, t});
+  eff::invoke_command(Sleep{{}, t});
 }
 
 void fork(std::function<void()> proc)
 {
-  OneShot::InvokeCmd(Fork{{}, proc});
+  eff::invoke_command(Fork{{}, proc});
 }
 
 void kill()
 {
-  OneShot::InvokeCmd(Kill{});
+  eff::invoke_command(Kill{});
 }
 
-using Res = Resumption<void()>;
+using Res = eff::resumption<void()>;
 
 using INT = int;
 
@@ -83,7 +85,7 @@ struct ThreadInfo {
   Res res;
 };
 
-class Scheduler : public FlatHandler<void, Sleep, Fork, Kill> {
+class Scheduler : public eff::flat_handler<void, Sleep, Fork, Kill> {
 public:
   static void Start(std::function<void()> f)
   {
@@ -107,7 +109,7 @@ public:
       queue.pop_front();
       if (t > now) { std::this_thread::sleep_for(t - now); }
       currentThread.background = background;
-      std::move(resumption).Resume();
+      std::move(resumption).resume();
 
       // Render
       Clear();
@@ -131,7 +133,7 @@ public:
   } 
   static void Run(std::function<void()> f)
   {
-    OneShot::Handle<Scheduler>(f);
+    eff::handle<Scheduler>(f);
   }
   static void Enqueue(TimePoint wakeAt, bool background, Res r)
   {
@@ -139,17 +141,17 @@ public:
     auto it = std::find_if(queue.begin(), queue.end(), pred);
     queue.insert(it, {wakeAt, background, std::move(r)});
   }
-  void CommandClause(Sleep s, Res r) override
+  void handle_command(Sleep s, Res r) override
   {
     Enqueue(chrono::system_clock::now() + s.time, currentThread.background, std::move(r));
   }
-  void CommandClause(Fork f, Res r) override
+  void handle_command(Fork f, Res r) override
   {
     auto time = chrono::system_clock::now();
     Enqueue(time, currentThread.background, std::move(r));
     Enqueue(time, f.background, Res{std::bind(Run, f.proc)});
   }
-  void CommandClause(Kill, Res) override { }
+  void handle_command(Kill, Res) override { }
 };
 
 std::list<ThreadInfo> Scheduler::queue;

@@ -13,13 +13,13 @@
 
 #include "cpp-effects/cpp-effects.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // ----------------------------
 // Async-await with a scheduler
 // ----------------------------
 
-using Res = Resumption<void()>;
+using Res = eff::resumption<void()>;
 
 template <typename T>
 class Scheduler;
@@ -38,16 +38,16 @@ private:
   std::optional<T> value;
 };
 
-struct Yield : Command<> { };
+struct Yield : eff::command<> { };
 
-struct Await : Command<> {
+struct Await : eff::command<> {
   GenericFuture* future;
 };
 
 std::vector<Res> queue;
 
 template <typename T>
-class Scheduler : public Handler<void, T, Yield, Await> {
+class Scheduler : public eff::handler<void, T, Yield, Await> {
   template <typename TT> friend Future<TT>* async(std::function<TT()> f);
 public:
   Scheduler(Future<T>* currentFuture) : currentFuture(currentFuture) { }
@@ -61,7 +61,7 @@ private:
   Future<T>* currentFuture;
   static void Run(Future<T>* future, std::function<T()> f)
   {
-    OneShot::Handle<Scheduler<T>>(f, future);
+    eff::handle<Scheduler<T>>(f, future);
   }
   void wakeRandom()
   {
@@ -70,19 +70,19 @@ private:
     std::advance(it, rand() % queue.size());
     auto resumption = std::move(*it);
     queue.erase(it);
-    std::move(resumption).Resume();
+    std::move(resumption).resume();
   }
-  void CommandClause(Yield, Res r) override
+  void handle_command(Yield, Res r) override
   {
     queue.push_back(std::move(r));
     wakeRandom();
   }
-  void CommandClause(Await f, Res r) override
+  void handle_command(Await f, Res r) override
   {
     f.future->awaiting.push_back(std::move(r));
     wakeRandom();
   }
-  void ReturnClause(T val) override
+  void handle_return(T val) override
   {
     std::move(currentFuture->awaiting.begin(), currentFuture->awaiting.end(),
       std::back_inserter(queue));
@@ -93,14 +93,14 @@ private:
 
 void yield()
 {
-  OneShot::InvokeCmd(Yield{});
+  eff::invoke_command(Yield{});
 }
 
 template <typename T>
 T await(Future<T>* future)
 {
   if (*future) { return future->Value(); }
-  OneShot::InvokeCmd(Await{{}, future});
+  eff::invoke_command(Await{{}, future});
   return future->Value();
 }
 

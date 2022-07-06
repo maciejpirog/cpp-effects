@@ -11,7 +11,7 @@
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 volatile int a = 19;
 volatile int b = 585;
@@ -118,22 +118,22 @@ void testDCast(int max)
 // Handlers
 // --------
 
-struct Foo : Command<int> { int x; };
+struct Foo : eff::command<int> { int x; };
 
-class Han : public Handler<void, void, Foo> {
-  void ReturnClause () override { }
-  void CommandClause(Foo c, Resumption<void(int)> r) override
+class Han : public eff::handler<void, void, Foo> {
+  void handle_return() override { }
+  void handle_command(Foo c, eff::resumption<void(int)> r) override
   {
-    std::move(r).TailResume((a * c.x + b) % 101);
+    std::move(r).tail_resume((a * c.x + b) % 101);
   }
 };
 
 __attribute__((noinline))
 void testHandlers(int max)
 {
-  OneShot::Handle<Han>([=](){
+  eff::handle<Han>([=](){
     for (int i = 0; i < max; i++) {
-      SUM += OneShot::InvokeCmd(Foo{{}, i});
+      SUM += eff::invoke_command(Foo{{}, i});
     }
   });
 }
@@ -142,9 +142,9 @@ void testHandlers(int max)
 // Plain handlers
 // --------------
 
-class PHan : public Handler<void, void, Plain<Foo>> {
-  void ReturnClause () override { }
-  int CommandClause(Foo c) override
+class PHan : public eff::handler<void, void, eff::plain<Foo>> {
+  void handle_return() override { }
+  int handle_command(Foo c) override
   {
     return (a * c.x + b) % 101;
   }
@@ -153,9 +153,9 @@ class PHan : public Handler<void, void, Plain<Foo>> {
 __attribute__((noinline))
 void testPlainHandlers(int max)
 {
-  OneShot::Handle<PHan>([=](){
+  eff::handle<PHan>([=](){
     for (int i = 0; i < max; i++) {
-      SUM += OneShot::InvokeCmd(Foo{{}, i});
+      SUM += eff::invoke_command(Foo{{}, i});
     }
   });
 }
@@ -168,9 +168,9 @@ void testPlainHandlers(int max)
 __attribute__((noinline))
 void testStaticHandlers(int max)
 {
-  OneShot::Handle<Han>([=](){
+  eff::handle<Han>([=](){
     for (int i = 0; i < max; i++) {
-      SUM += OneShot::StaticInvokeCmd<Han>(Foo{{}, i});
+      SUM += eff::static_invoke_command<Han>(Foo{{}, i});
     }
   });
 }
@@ -182,9 +182,9 @@ void testStaticHandlers(int max)
 __attribute__((noinline))
 void testStaticPlainHandlers(int max)
 {
-  OneShot::Handle<PHan>([=](){
+  eff::handle<PHan>([=](){
     for (int i = 0; i < max; i++) {
-      SUM += OneShot::StaticInvokeCmd<PHan>(Foo{{}, i});
+      SUM += eff::static_invoke_command<PHan>(Foo{{}, i});
     }
   });
 }
@@ -196,10 +196,10 @@ void testStaticPlainHandlers(int max)
 __attribute__((noinline))
 void testKnownPlainHandlers(int max)
 {
-  OneShot::Handle<PHan>(10, [=](){
+  eff::handle<PHan>(10, [=](){
     for (int i = 0; i < max; i++) {
-      auto it = OneShot::FindHandler(10);
-      SUM += OneShot::StaticInvokeCmd<PHan>(it, Foo{{}, i});
+      auto it = eff::find_handler(10);
+      SUM += eff::static_invoke_command<PHan>(it, Foo{{}, i});
     }
   });
 }

@@ -2,7 +2,7 @@
 // Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
 // License: MIT
 
-// Test: Noresume command clauses
+// Test: no_resume command clauses
 
 #include <functional>
 #include <iostream>
@@ -10,49 +10,49 @@
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
-struct Print : Command<> { };
+struct Print : eff::command<> { };
 
-class Printer : public Handler<int, int, Print> {
+class Printer : public eff::handler<int, int, Print> {
 public:
   Printer(const std::string& msg) : msg(msg) { }
 private:
   std::string msg;
-  int CommandClause(Print, Resumption<int()> r) override
+  int handle_command(Print, eff::resumption<int()> r) override
   {
     std::cout << msg << std::flush;
-    return std::move(r).Resume();
+    return std::move(r).resume();
   }
-  int ReturnClause(int a) override { return a + 1; }
+  int handle_return(int a) override { return a + 1; }
 };
 
-struct Error : Command<> { };
+struct Error : eff::command<> { };
 
-class Catch : public Handler<int, int, NoResume<Error>> {
-  int CommandClause(Error) override
+class Catch : public eff::handler<int, int, eff::no_resume<Error>> {
+  int handle_command(Error) override
   {
     std::cout << "[caught]" << std::flush;
     return 42;
   }
-  int ReturnClause(int a) override { return a + 100; }
+  int handle_return(int a) override { return a + 100; }
 };
 
 void test()
 {
   std::cout <<
-  OneShot::HandleWith([](){
+  eff::handle_with([](){
   int i =
-  OneShot::HandleWith([](){
-  OneShot::HandleWith([](){
-    OneShot::InvokeCmd(Print{});
-    OneShot::InvokeCmd(Print{});
-    OneShot::InvokeCmd(Error{});
-    OneShot::InvokeCmd(Print{});
-    OneShot::InvokeCmd(Print{});
+  eff::handle_with([](){
+  eff::handle_with([](){
+    eff::invoke_command(Print{});
+    eff::invoke_command(Print{});
+    eff::invoke_command(Error{});
+    eff::invoke_command(Print{});
+    eff::invoke_command(Print{});
     return 100;
-  }, std::make_shared<Printer>("[in]"));  OneShot::InvokeCmd(Print{}); return 2;
-  }, std::make_shared<Catch>());          OneShot::InvokeCmd(Print{}); return i;
+  }, std::make_shared<Printer>("[in]"));  eff::invoke_command(Print{}); return 2;
+  }, std::make_shared<Catch>());          eff::invoke_command(Print{}); return i;
   }, std::make_shared<Printer>("[out]"));
   std::cout << "\t(expected: [in][in][caught][out]43)" << std::endl;
 }
@@ -61,20 +61,20 @@ void test()
 // Example from the reference manual
 // ---------------------------------
 
-class Cancel : public Handler<void, void, NoResume<Error>> {
-  void CommandClause(Error) override
+class Cancel : public eff::handler<void, void, eff::no_resume<Error>> {
+  void handle_command(Error) override
   {
     std::cout << "Error!" << std::endl;
   }
-  void ReturnClause() override {}
+  void handle_return() override {}
 };
 
 void testError()
 {
   std::cout << "Welcome!" << std::endl;
-  OneShot::Handle<Cancel>([](){
+  eff::handle<Cancel>([](){
     std::cout << "So far so good..." << std::endl;
-    OneShot::InvokeCmd(Error{}); 
+    eff::invoke_command(Error{}); 
     std::cout << "I made it!" << std::endl;
   });
   std::cout << "Bye!" << std::endl;

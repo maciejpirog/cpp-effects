@@ -11,21 +11,21 @@
 
 #include "cpp-effects/cpp-effects.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // -----------------------------
 // Shift0 and reset via handlers
 // -----------------------------
 
 template <typename Answer, typename Hole>
-struct Shift0 : Command<Hole> {
-  std::function<Answer(Resumption<Answer(Hole)>)> e;
+struct Shift0 : eff::command<Hole> {
+  std::function<Answer(eff::resumption<Answer(Hole)>)> e;
 };
 
 template <typename Answer, typename Hole>
-class Reset : public FlatHandler<Answer, Shift0<Answer, Hole>> {
-  Answer CommandClause(
-    Shift0<Answer, Hole> s, Resumption<Answer(Hole)> r) final override
+class Reset : public eff::flat_handler<Answer, Shift0<Answer, Hole>> {
+  Answer handle_command(
+    Shift0<Answer, Hole> s, eff::resumption<Answer(Hole)> r) final override
   {
     return s.e(std::move(r));
   }
@@ -38,16 +38,16 @@ class Reset : public FlatHandler<Answer, Shift0<Answer, Hole>> {
 template <typename Answer, typename Hole>
 Answer reset(std::function<Answer()> f)
 {
-  return OneShot::Handle<Reset<Answer, Hole>>(f);
+  return eff::handle<Reset<Answer, Hole>>(f);
 }
 
 template <typename Answer, typename Hole>
 Hole shift0(std::function<Answer(std::function<Answer(Hole)>)> e)
 {
-  return OneShot::InvokeCmd(Shift0<Answer, Hole>{{},
-    [=](Resumption<Answer(Hole)> k) -> Answer {
-      return e([k = k.Release()](Hole out) -> Answer {
-        return Resumption<Answer(Hole)>(k).Resume(out);
+  return eff::invoke_command(Shift0<Answer, Hole>{{},
+    [=](eff::resumption<Answer(Hole)> k) -> Answer {
+      return e([k = k.release()](Hole out) -> Answer {
+        return eff::resumption<Answer(Hole)>(k).resume(out);
       });
     }
   });

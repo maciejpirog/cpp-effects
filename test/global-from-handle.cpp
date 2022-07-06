@@ -2,27 +2,27 @@
 // Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
 // License: MIT
 
-// Test: Swapping handlers
+// Test: Handlers can be used to define global values
 
 #include <functional>
 #include <iostream>
 
 #include "cpp-effects/cpp-effects.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
-struct Break : Command<> { };
+struct Break : eff::command<> { };
 
-class HH : public Handler<int, void, Break> {
-  int CommandClause(Break, Resumption<int()>) override {
+class HH : public eff::handler<int, void, Break> {
+  int handle_command(Break, eff::resumption<int()>) override {
     return 100;
   }
-  int ReturnClause() override {
+  int handle_return() override {
     return 10;
   }
 };
 
-int g = OneShot::Handle<HH>([](){ OneShot::InvokeCmd(Break{}); });
+int g = eff::handle<HH>([](){ eff::invoke_command(Break{}); });
 
 int main()
 {

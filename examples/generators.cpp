@@ -11,7 +11,7 @@
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // --------------
 // Internal stuff
@@ -21,14 +21,14 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct Yield : Command<> {
+struct Yield : eff::command<> {
   T value;
 };
 
 template <typename T>
 void yield(int64_t label, T x)
 {
-  OneShot::StaticInvokeCmd<GeneratorHandler<T>>(label, Yield<T>{{}, x});
+  eff::static_invoke_command<GeneratorHandler<T>>(label, Yield<T>{{}, x});
 }
 
 template <typename T>
@@ -40,16 +40,16 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<Result<T>()> resumption;
+  eff::resumption<Result<T>()> resumption;
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<Result<T>, void, NoManage<Yield<T>>> {
-  Result<T> CommandClause(Yield<T> y, Resumption<Result<T>()> r) override
+class GeneratorHandler : public eff::handler<Result<T>, void, eff::no_manage<Yield<T>>> {
+  Result<T> handle_command(Yield<T> y, eff::resumption<Result<T>()> r) override
   {
     return GenState<T>{y.value, std::move(r)};
   }
-  Result<T> ReturnClause() override
+  Result<T> handle_return() override
   {
     return {};
   }
@@ -70,8 +70,8 @@ class Generator {
 public:
   Generator(std::function<void(std::function<void(T)>)> f)
   {
-    auto label = OneShot::FreshLabel();
-    result = OneShot::Handle<GeneratorHandler<T>>(label, [f, label](){
+    auto label = eff::fresh_label();
+    result = eff::handle<GeneratorHandler<T>>(label, [f, label](){
       f([label](T x) { yield<T>(label, x); });
     });
   }
@@ -86,7 +86,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Next"); }
-    result = std::move(result->resumption).Resume();
+    result = std::move(result->resumption).resume();
     return result.has_value();
   }
   explicit operator bool() const

@@ -10,9 +10,9 @@
 
 #include "cpp-effects/cpp-effects.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
-class Cmd : public Command<> {
+class Cmd : public eff::command<> {
 public:
   int id;
   Cmd() : id(rand() % 1000) { std::cout << id << " born" << std::endl; }
@@ -31,12 +31,12 @@ public:
   Cmd& operator=(Cmd&&) = default;
 };
 
-class MyHandler : public Handler<void, void, Cmd> {
-  void ReturnClause() override { }
-  void CommandClause(Cmd c, Resumption<void()> r) override
+class MyHandler : public eff::handler<void, void, Cmd> {
+  void handle_return() override { }
+  void handle_command(Cmd c, eff::resumption<void()> r) override
   {
     std::cout << "In handler: received command id = " << c.id << std::endl;
-    std::move(r).Resume();
+    std::move(r).resume();
     std::cout << "In handler: still using command id = " << c.id << std::endl;
   }
 };
@@ -46,7 +46,7 @@ void myComputation()
   std::cout << "In computation: Creating a command..." << std::endl;
   {
     Cmd cmd;
-    OneShot::InvokeCmd(cmd);
+    eff::invoke_command(cmd);
   }
   std::cout << "In computation: The command is gone..." << std::endl;
 }
@@ -54,7 +54,7 @@ void myComputation()
 int main()
 {
   std::cout << "--- command-lifetime ---" << std::endl;
-  OneShot::Handle<MyHandler>(myComputation);
+  eff::handle<MyHandler>(myComputation);
 }
 
 // Output:

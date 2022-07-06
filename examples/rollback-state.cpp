@@ -9,7 +9,7 @@
 
 #include "cpp-effects/cpp-effects.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // --------------
 // Internal stuff
@@ -29,11 +29,11 @@ struct Assign : AssignBase {
   virtual ~Assign() { }
 };
 
-struct AssignCmd : Command<> {
+struct AssignCmd : eff::command<> {
   AssignBase* asg;
 };
 
-struct Rollback : Command<> { };
+struct Rollback : eff::command<> { };
 
 // ----------------------
 // Programmer's interface
@@ -41,21 +41,21 @@ struct Rollback : Command<> { };
 
 void rollback()
 {
-  OneShot::InvokeCmd(Rollback{});
+  eff::invoke_command(Rollback{});
 }
 
-class RollbackState : public Handler<bool, void, Rollback, AssignCmd> {
-  bool ReturnClause() override
+class RollbackState : public eff::handler<bool, void, Rollback, AssignCmd> {
+  bool handle_return() override
   {
     return true;
   }
-  bool CommandClause(Rollback, Resumption<bool()>) override
+  bool handle_command(Rollback, eff::resumption<bool()>) override
   {
     return false;
   }
-  bool CommandClause(AssignCmd a, Resumption<bool()> r) override
+  bool handle_command(AssignCmd a, eff::resumption<bool()> r) override
   {
-    bool result = std::move(r).Resume();
+    bool result = std::move(r).resume();
     if (!result) { a.asg->undo(); }
     delete a.asg;
     return result;
@@ -69,7 +69,7 @@ template <typename T>
 struct track {
   T& var;
   track(T& var) : var(var) { }
-  void operator=(const T& val) { OneShot::InvokeCmd(AssignCmd{{}, new Assign<T>(var, val)}); }
+  void operator=(const T& val) { eff::invoke_command(AssignCmd{{}, new Assign<T>(var, val)}); }
 };
 
 // ------------------
@@ -80,7 +80,7 @@ int main()
 {
   int x = 1;
   char c = 'a';
-  OneShot::Handle<RollbackState>([&]() {
+  eff::handle<RollbackState>([&]() {
     std::cout << "x = " << x << ", " << "c = " << c << std::endl;
     (track<int>) x = 2;
     (track<char>) c = 'b';

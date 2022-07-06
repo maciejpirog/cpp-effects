@@ -13,61 +13,61 @@
 
 #include "cpp-effects/cpp-effects.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // --
 // 1.
 // --
 
-struct PingOuter : Command<> { };
+struct PingOuter : eff::command<> { };
 
-struct PingInner : Command<> { };
+struct PingInner : eff::command<> { };
 
-struct CutMiddlemanAid : Command<> { };
+struct CutMiddlemanAid : eff::command<> { };
 
-struct CutMiddlemanAbet : Command<> {
-  ResumptionData<void, void>* res;
+struct CutMiddlemanAbet : eff::command<> {
+  eff::resumption_data<void, void>* res;
 };
 
-class HInner : public Handler<void, void, PingInner, CutMiddlemanAid> {
-  void CommandClause(PingInner, Resumption<void()> r) override
+class HInner : public eff::handler<void, void, PingInner, CutMiddlemanAid> {
+  void handle_command(PingInner, eff::resumption<void()> r) override
   {
     std::cout << "Inner!" << std::endl;
-    std::move(r).TailResume();
+    std::move(r).tail_resume();
   }
-  void CommandClause(CutMiddlemanAid, Resumption<void()> r) override
+  void handle_command(CutMiddlemanAid, eff::resumption<void()> r) override
   {
-    OneShot::InvokeCmd(CutMiddlemanAbet{{}, r.Release()});
+    eff::invoke_command(CutMiddlemanAbet{{}, r.release()});
   }
-  void ReturnClause() override { }
+  void handle_return() override { }
 };
 
-class HOuter : public Handler<void, void, PingOuter, CutMiddlemanAbet> {
-  void CommandClause(PingOuter, Resumption<void()> r) override
+class HOuter : public eff::handler<void, void, PingOuter, CutMiddlemanAbet> {
+  void handle_command(PingOuter, eff::resumption<void()> r) override
   {
     std::cout << "Outer!" << std::endl;
-    std::move(r).TailResume();
+    std::move(r).tail_resume();
   }
-  void CommandClause(CutMiddlemanAbet a, Resumption<void()>) override
+  void handle_command(CutMiddlemanAbet a, eff::resumption<void()>) override
   {
-    Resumption<void()>(a.res).TailResume();
+    eff::resumption<void()>(a.res).tail_resume();
   }
 
-  void ReturnClause() override { }
+  void handle_return() override { }
 };
 
 void test1()
 {
     std::cout << "A+" << std::endl;
-    OneShot::Handle<HOuter>([](){
+    eff::handle<HOuter>([](){
       std::cout << "B+" << std::endl;
-      OneShot::Handle<HInner>([&](){
+      eff::handle<HInner>([&](){
         std::cout << "C+" << std::endl;
-        OneShot::InvokeCmd(PingOuter{});
-        OneShot::InvokeCmd(PingInner{});
-        OneShot::InvokeCmd(CutMiddlemanAid{});
-        // OneShot::InvokeCmd(PingOuter{}); // bad idea!
-        OneShot::InvokeCmd(PingInner{});
+        eff::invoke_command(PingOuter{});
+        eff::invoke_command(PingInner{});
+        eff::invoke_command(CutMiddlemanAid{});
+        // eff::invoke_command(PingOuter{}); // bad idea!
+        eff::invoke_command(PingInner{});
         std::cout << "C-" << std::endl;
       });
       std::cout << "B-" << std::endl;
@@ -91,36 +91,36 @@ void test1()
 // 2.
 // --
 
-ResumptionData<void, int>* Res = nullptr;
+eff::resumption_data<void, int>* Res = nullptr;
 
-struct Inc : Command<> { };
+struct Inc : eff::command<> { };
 
-struct Break : Command<> { };
+struct Break : eff::command<> { };
 
 void inc()
 {
-  OneShot::InvokeCmd(Inc{});
+  eff::invoke_command(Inc{});
 }
 void break_()
 {
-  OneShot::InvokeCmd(Break{});
+  eff::invoke_command(Break{});
 }
 int resume()
 {
-  return Resumption<int()>(Res).Resume();
+  return eff::resumption<int()>(Res).resume();
 }
 
-class HIP : public Handler<int, int, Inc, Break> {
-  int CommandClause(Break, Resumption<int()> r) override
+class HIP : public eff::handler<int, int, Inc, Break> {
+  int handle_command(Break, eff::resumption<int()> r) override
   {
-    Res = r.Release();
+    Res = r.release();
     return 0;
   }
-  int CommandClause(Inc, Resumption<int()> r) override
+  int handle_command(Inc, eff::resumption<int()> r) override
   {
-    return std::move(r).Resume() + 1;
+    return std::move(r).resume() + 1;
   }
-  int ReturnClause(int v) override { return v; }
+  int handle_return(int v) override { return v; }
 };
 
 int comp()
@@ -136,7 +136,7 @@ int comp()
 
 void test2()
 {
-  std::cout << OneShot::Handle<HIP>(comp) << std::endl;
+  std::cout << eff::handle<HIP>(comp) << std::endl;
   std::cout << resume() << std::endl;
   std::cout << resume() << std::endl;
 }

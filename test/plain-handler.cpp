@@ -11,28 +11,28 @@
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // -----------------------------------
 // Commands and programmer's interface
 // -----------------------------------
 
 template<typename S>
-struct Put : Command<> {
+struct Put : eff::command<> {
   S newState;
 };
 
 template<typename S>
-struct Get : Command<S> { };
+struct Get : eff::command<S> { };
 
 template<typename S>
 void put(S s) {
-  OneShot::InvokeCmd(Put<S>{{}, s});
+  eff::invoke_command(Put<S>{{}, s});
 }
 
 template<typename S>
 S get() {
-  return OneShot::InvokeCmd(Get<S>{});
+  return eff::invoke_command(Get<S>{});
 }
 
 // ----------------------
@@ -63,45 +63,45 @@ std::string test2()
 // -------------------
 
 template<typename Answer, typename S>
-class HStateful : public Handler<Answer, Answer, Plain<Put<S>>, Plain<Get<S>>> {
+class HStateful : public eff::handler<Answer, Answer, eff::plain<Put<S>>, eff::plain<Get<S>>> {
 public:
   HStateful(S initialState) : state(initialState) { }
 private:
   S state;
-  void CommandClause(Put<S> p) override
+  void handle_command(Put<S> p) override
   {
     state = p.newState;
   }
-  S CommandClause(Get<S>) override
+  S handle_command(Get<S>) override
   {
     return state;
   }
-  Answer ReturnClause(Answer a) override { return a; }
+  Answer handle_return(Answer a) override { return a; }
 };
 
 // Specialisation for Answer = void
 
 template<typename S>
-class HStateful<void, S> : public Handler<void, void, Plain<Put<S>>, Plain<Get<S>>> {
+class HStateful<void, S> : public eff::handler<void, void, eff::plain<Put<S>>, eff::plain<Get<S>>> {
 public:
   HStateful(S initialState) : state(initialState) { }
 private:
   S state;
-  void CommandClause(Put<S> p) override
+  void handle_command(Put<S> p) override
   {
     state = p.newState;
   }
-  S CommandClause(Get<S>) override
+  S handle_command(Get<S>) override
   {
     return state;
   }
-  void ReturnClause() override { }
+  void handle_return() override { }
 };
 
 void testStateful()
 {
-  OneShot::Handle<HStateful<void, int>>(test, 100);
-  std::cout << OneShot::Handle<HStateful<std::string, int>>(test2, 100);
+  eff::handle<HStateful<void, int>>(test, 100);
+  std::cout << eff::handle<HStateful<std::string, int>>(test2, 100);
   std::cout << std::endl;
 
   // Output:
@@ -112,51 +112,51 @@ void testStateful()
 
 // -------------------------------------------------------
 
-struct Do : Command<> { };
+struct Do : eff::command<> { };
 
-class Bracket : public Handler<void, void, Do> {
+class Bracket : public eff::handler<void, void, Do> {
 public:
   Bracket(const std::string& msg) : msg(msg) { }
 private:
   std::string msg;
-  void CommandClause(Do, Resumption<void()> r) override
+  void handle_command(Do, eff::resumption<void()> r) override
   {
     std::string lmsg = this->msg;
     std::cout << lmsg << "+" << std::flush;
-    std::move(r).Resume();
+    std::move(r).resume();
     std::cout << lmsg << "-" << std::flush;
   }
-  void ReturnClause() override { }
+  void handle_return() override { }
 };
 
-struct Print : Command<> { };
+struct Print : eff::command<> { };
 
-class Printer : public Handler<void, void, Plain<Print>> {
+class Printer : public eff::handler<void, void, eff::plain<Print>> {
 public:
   Printer(const std::string& msg) : msg(msg) { }
 private:
   std::string msg;
-  void CommandClause(Print) override
+  void handle_command(Print) override
   {
     std::string lmsg = this->msg;
     std::cout << lmsg << "+" << std::flush;
-    OneShot::InvokeCmd(Do{});
+    eff::invoke_command(Do{});
     std::cout << lmsg << "-" << std::flush;
   }
-  void ReturnClause() override { }
+  void handle_return() override { }
 };
 
 void sandwichComp()
 {
-  OneShot::InvokeCmd(Do{});
-  OneShot::InvokeCmd(Print{});
+  eff::invoke_command(Do{});
+  eff::invoke_command(Print{});
 }
 
 void testSandwich()
 {
-  OneShot::HandleWith([](){
-  OneShot::HandleWith([](){
-  OneShot::HandleWith([](){
+  eff::handle_with([](){
+  eff::handle_with([](){
+  eff::handle_with([](){
     sandwichComp();
   }, std::make_shared<Bracket>("[in]"));
   }, std::make_shared<Printer>("[print]"));
@@ -168,25 +168,25 @@ void testSandwich()
 // Example from the reference manual
 // ---------------------------------
 
-struct Add : Command<int> {
+struct Add : eff::command<int> {
   int x, y;
 };
 
 template <typename T>
-class Calculator : public Handler <T, T, Plain<Add>> {
-  int CommandClause(Add c) override {
+class Calculator : public eff::handler<T, T, eff::plain<Add>> {
+  int handle_command(Add c) override {
     return c.x + c.y;
   }
-  T ReturnClause(T s) override {
+  T handle_return(T s) override {
     return s;
   }
 };
 
 void testCalc()
 {
-  OneShot::Handle<Calculator<std::monostate>>([]() -> std::monostate {
-    std::cout << "2 + 5 = " << OneShot::InvokeCmd<Add>({{}, 2, 5}) << std::endl;
-    std::cout << "11 + 3 = " << OneShot::InvokeCmd<Add>({{}, 11, 3}) << std::endl;
+  eff::handle<Calculator<std::monostate>>([]() -> std::monostate {
+    std::cout << "2 + 5 = " << eff::invoke_command<Add>({{}, 2, 5}) << std::endl;
+    std::cout << "11 + 3 = " << eff::invoke_command<Add>({{}, 11, 3}) << std::endl;
     return {};
   });
 }

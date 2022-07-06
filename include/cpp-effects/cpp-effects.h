@@ -232,7 +232,7 @@ public:
   metaframe() : label(0) { }
   int64_t label;
   ctx::fiber fiber;
-  void* returnBuffer;
+  void* return_buffer;
 };
 
 // When invoking a command in the client code, we know the type of the
@@ -264,7 +264,8 @@ public:
   virtual typename Cmd::out_type invoke_command(
     std::list<cpp_effects_internals::metaframe_ptr>::iterator it, const Cmd& cmd) final override;
 protected:
-  virtual Answer handle_command(Cmd, resumption<typename Cmd::template resumption_type<Answer>>) = 0;
+  virtual Answer handle_command(
+      Cmd, resumption<typename Cmd::template resumption_type<Answer>>) = 0;
 private:
   resumption_data<typename Cmd::out_type, Answer> resumptionBuffer;
 };
@@ -314,7 +315,7 @@ typename Cmd::out_type command_clause<Answer, Cmd>::invoke_command(
     cpp_effects_internals::metaframe_ptr _(rd.stored_metastack.back());
 
     if constexpr (!std::is_void<Answer>::value) {
-      *(static_cast<std::optional<Answer>*>(metastack.front()->returnBuffer)) =
+      *(static_cast<std::optional<Answer>*>(metastack.front()->return_buffer)) =
         this->handle_command(
             cmd, resumption<typename Cmd::template resumption_type<Answer>>(rd));
     } else {
@@ -556,8 +557,8 @@ Answer resumption_data<Out, Answer>::resume()
 
   if constexpr (!std::is_void<Answer>::value) {
     std::optional<Answer> answer;
-    void* prevBuffer = metastack.front()->returnBuffer;
-    metastack.front()->returnBuffer = &answer;
+    void* prevBuffer = metastack.front()->return_buffer;
+    metastack.front()->return_buffer = &answer;
 
     std::move(this->stored_metastack.front()->fiber).resume_with(
         [&](ctx::fiber&& prev) -> ctx::fiber {
@@ -573,7 +574,7 @@ Answer resumption_data<Out, Answer>::resume()
       temp->tail_resume();
     }
 
-    metastack.front()->returnBuffer = prevBuffer;
+    metastack.front()->return_buffer = prevBuffer;
     return std::move(*answer);
   } else {
     std::move(this->stored_metastack.front()->fiber).resume_with(
@@ -640,10 +641,17 @@ class handler :
   public cpp_effects_internals::metaframe,
   public cpp_effects_internals::command_clause<Answer, Cmds>...
 {
-  template <typename H> friend
-  typename H::answer_type handle_with(
+  template <typename H>
+  friend typename H::answer_type handle_with(
       int64_t label, std::function<typename H::body_type()> body, std::shared_ptr<H> handler);
 
+  template <typename H, typename Cmd>
+  friend typename Cmd::out_type static_invoke_command(int64_t goto_handler, const Cmd& cmd);
+
+  template <typename H, typename Cmd>
+  friend typename Cmd::out_type static_invoke_command(const Cmd& cmd);
+
+public:
   using cpp_effects_internals::command_clause<Answer, Cmds>::handle_command...;
   using cpp_effects_internals::command_clause<Answer, Cmds>::invoke_command...;
 public:
@@ -658,7 +666,10 @@ public:
 protected:
   virtual Answer handle_return(Body b) = 0;
 private:
-  Answer run_return(cpp_effects_internals::tangible<Body> b) { return handle_return(std::move(b.value)); }
+  Answer run_return(cpp_effects_internals::tangible<Body> b)
+  {
+    return handle_return(std::move(b.value));
+  }
 };
 
 // We specialise for Body = void
@@ -672,6 +683,13 @@ class handler<Answer, void, Cmds...> :
   typename H::answer_type handle_with(
       int64_t label, std::function<typename H::body_type()> body, std::shared_ptr<H> handler);
 
+  template <typename H, typename Cmd>
+  friend typename Cmd::out_type static_invoke_command(int64_t goto_handler, const Cmd& cmd);
+
+  template <typename H, typename Cmd>
+  friend typename Cmd::out_type static_invoke_command(const Cmd& cmd);
+
+public:
   using cpp_effects_internals::command_clause<Answer, Cmds>::handle_command...;
   using cpp_effects_internals::command_clause<Answer, Cmds>::invoke_command...;
 public:
@@ -766,7 +784,7 @@ typename H::answer_type handle_with(
 
     std::move(metastack.front()->fiber).resume_with([&](ctx::fiber&&) -> ctx::fiber {
       if constexpr (!std::is_void<Answer>::value) {
-        *(static_cast<std::optional<Answer>*>(metastack.front()->returnBuffer)) =
+        *(static_cast<std::optional<Answer>*>(metastack.front()->return_buffer)) =
           std::static_pointer_cast<H>(returnFrame)->run_return(std::move(b));
       } else {
         std::static_pointer_cast<H>(returnFrame)->run_return(std::move(b));
@@ -781,8 +799,8 @@ typename H::answer_type handle_with(
 
   if constexpr (!std::is_void<Answer>::value) {
     std::optional<Answer> answer;
-    void* prevBuffer = metastack.front()->returnBuffer;
-    metastack.front()->returnBuffer = &answer;
+    void* prevBuffer = metastack.front()->return_buffer;
+    metastack.front()->return_buffer = &answer;
     std::move(bodyFiber).resume();
 
     // Trampoline tail-resumes
@@ -792,7 +810,7 @@ typename H::answer_type handle_with(
       temp->tail_resume();
     }
 
-    metastack.front()->returnBuffer = prevBuffer;
+    metastack.front()->return_buffer = prevBuffer;
     return std::move(*answer);
   } else {
     std::move(bodyFiber).resume();

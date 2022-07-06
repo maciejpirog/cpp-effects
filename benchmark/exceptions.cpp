@@ -11,7 +11,7 @@
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 volatile int64_t sum = 0;
 volatile int64_t esum = 0;
@@ -43,11 +43,11 @@ void testNative(int max, int mod_)
 // Handlers
 // --------
 
-struct Error : Command<> { };
+struct Error : eff::command<> { };
 
-class Catch : public Handler<void, void, Error> {
-  void ReturnClause () final override { }
-  void CommandClause(Error, Resumption<void()>) final override { esum++; }
+class Catch : public eff::handler<void, void, Error> {
+  void handle_return() final override { }
+  void handle_command(Error, eff::resumption<void()>) final override { esum++; }
 };
 
 void testHandlers(int max, int mod_)
@@ -55,8 +55,8 @@ void testHandlers(int max, int mod_)
   mod = mod_;
   for (i = 0; i < max; i += INC)
   {
-    OneShot::Handle<Catch>([](){
-      if (i % mod == 0) { OneShot::InvokeCmd(Error{}); }
+    eff::handle<Catch>([](){
+      if (i % mod == 0) { eff::invoke_command(Error{}); }
       sum++;
     });
   }
@@ -66,9 +66,9 @@ void testHandlers(int max, int mod_)
 // NoResume handlers
 // -----------------
 
-class CatchNR : public Handler<void, void, NoResume<Error>> {
-  void ReturnClause () final override { }
-  void CommandClause(Error) final override { esum++; }
+class CatchNR : public eff::handler<void, void, eff::no_resume<Error>> {
+  void handle_return() final override { }
+  void handle_command(Error) final override { esum++; }
 };
 
 void testHandlersNR(int max, int mod_)
@@ -76,8 +76,8 @@ void testHandlersNR(int max, int mod_)
   mod = mod_;
   for (i = 0; i < max; i += INC)
   {
-    OneShot::Handle<CatchNR>([](){
-      if (i % mod == 0) { OneShot::InvokeCmd(Error{}); }
+    eff::handle<CatchNR>([](){
+      if (i % mod == 0) { eff::invoke_command(Error{}); }
       sum++;
     });
   }
@@ -92,8 +92,8 @@ void testSHandlers(int max, int mod_)
   mod = mod_;
   for (i = 0; i < max; i += INC)
   {
-    OneShot::Handle<Catch>([](){
-      if (i % mod == 0) { OneShot::StaticInvokeCmd<Catch>(Error{}); }
+    eff::handle<Catch>([](){
+      if (i % mod == 0) { eff::static_invoke_command<Catch>(Error{}); }
       sum++;
     });
   }
@@ -108,8 +108,8 @@ void testSHandlersNR(int max, int mod_)
   mod = mod_;
   for (i = 0; i < max; i += INC)
   {
-    OneShot::Handle<CatchNR>([](){
-      if (i % mod == 0) { OneShot::StaticInvokeCmd<CatchNR>(Error{}); }
+    eff::handle<CatchNR>([](){
+      if (i % mod == 0) { eff::static_invoke_command<CatchNR>(Error{}); }
       sum++;
     });
   }

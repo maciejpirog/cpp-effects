@@ -9,26 +9,26 @@
 
 #include "cpp-effects/cpp-effects.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // -------------------------------------------------------------------
 // In the first example, the handler object needs to survive after the
 // return clause
 // -------------------------------------------------------------------
 
-struct Cmd : public Command<> { };
+struct Cmd : public eff::command<> { };
 
-class MyHandler : public Handler<void, void, Cmd> {
+class MyHandler : public eff::handler<void, void, Cmd> {
 public:
   ~MyHandler() { msg = "dead"; std::cout << "The handler is dead!" << std::endl; }
 private:
   std::string msg = "alive";
   void PrintStatus() { std::cout << "I'm " << this->msg << "!" << std::endl; }
-  void ReturnClause() override { }
-  void CommandClause(Cmd, Resumption<void()> r) override
+  void handle_return() override { }
+  void handle_command(Cmd, eff::resumption<void()> r) override
   {
     this->PrintStatus();
-    std::move(r).Resume();
+    std::move(r).resume();
     this->PrintStatus(); // Do I still exist?
   }
 };
@@ -36,9 +36,9 @@ private:
 void afterReturn()
 {
   std::cout << "Good morning!" << std::endl;
-  OneShot::InvokeCmd(Cmd{});
+  eff::invoke_command(Cmd{});
   std::cout << "How are you?" << std::endl;
-  OneShot::InvokeCmd(Cmd{});
+  eff::invoke_command(Cmd{});
   std::cout << "Cheers!" << std::endl;
 }
 
@@ -47,43 +47,43 @@ void afterReturn()
 // resumption lives on
 // -----------------------------------------------------------
 
-struct OtherCmd : Command<> { };
+struct OtherCmd : eff::command<> { };
 
-Resumption<void()> res;
+eff::resumption<void()> res;
 
-class EscapeHandler :  public Handler<void, void, Cmd, OtherCmd> {
+class EscapeHandler :  public eff::handler<void, void, Cmd, OtherCmd> {
 public:
   ~EscapeHandler() { std::cout << "The handler is dead!" << std::endl; }
 private:
-  void CommandClause(Cmd, Resumption<void()> r)
+  void handle_command(Cmd, eff::resumption<void()> r)
   {
     res = std::move(r);
     std::cout << "Must give us pause!" << std::endl;
   }
-  void CommandClause(OtherCmd, Resumption<void()> r)
+  void handle_command(OtherCmd, eff::resumption<void()> r)
   {
     std::cout << "[[This is other cmd]]" << std::endl;
-    std::move(r).TailResume();
+    std::move(r).tail_resume();
     //std::cout << "[[This is other cmd]]" << std::endl;
   }
-  void ReturnClause() { std::cout << "Thanks!" << std::endl; }
+  void handle_return() { std::cout << "Thanks!" << std::endl; }
 };
 
 void resumptionEscape()
 {
-  OneShot::Handle<EscapeHandler>([](){
+  eff::handle<EscapeHandler>([](){
     std::cout << "To be" << std::endl;
-    OneShot::InvokeCmd(Cmd{});
+    eff::invoke_command(Cmd{});
     std::cout << "Or not to be" << std::endl;
-    OneShot::InvokeCmd(OtherCmd{});
-    OneShot::InvokeCmd(OtherCmd{});
-    OneShot::InvokeCmd(OtherCmd{});
+    eff::invoke_command(OtherCmd{});
+    eff::invoke_command(OtherCmd{});
+    eff::invoke_command(OtherCmd{});
     std::cout << "??" << std::endl;
   });
 
   std::cout << "[A short break]" << std::endl;
 
-  std::move(res).Resume();
+  std::move(res).resume();
 }
 
 // ----
@@ -94,7 +94,7 @@ int main()
 {
   std::cout << "--- handler-lifetime ---" << std::endl;
   std::cout << "** handler exists after return clause **" << std::endl;
-  OneShot::Handle<MyHandler>(afterReturn);
+  eff::handle<MyHandler>(afterReturn);
   std::cout << "  (expected:" << std::endl
     << "  Good morning!" << std::endl
     << "  I'm alive!" << std::endl

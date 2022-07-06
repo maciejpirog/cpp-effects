@@ -16,7 +16,7 @@
 
 #include "cpp-effects/cpp-effects.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 // ----------------------
 // Programmer's interface
@@ -69,7 +69,7 @@ class Scheduler {
   template <typename> friend class Actor;
 public:
   void Run(ActorBase* actor);
-  Scheduler() : label(OneShot::FreshLabel()) { }
+  Scheduler() : label(eff::fresh_label()) { }
 private:
   int64_t label;
   ActorBase* currentActor;
@@ -81,37 +81,37 @@ private:
 // Internal stuff
 // --------------
 
-using Res = Resumption<void()>;
+using Res = eff::resumption<void()>;
 
 struct ActorInfo {
   ActorBase* actorData;
   Res actorResumption;
 };
 
-struct CmdYield : Command<> { };
+struct CmdYield : eff::command<> { };
 
-struct CmdFork : Command<> {
+struct CmdFork : eff::command<> {
   ActorBase* actor;
 };
 
-class ActorHandler : public Handler<void, void, CmdYield, CmdFork> {
+class ActorHandler : public eff::handler<void, void, CmdYield, CmdFork> {
 public:
   ActorHandler(Scheduler* scheduler) : scheduler(scheduler) { }
 private:
   Scheduler* scheduler;
-  void CommandClause(CmdYield, Res r) override
+  void handle_command(CmdYield, Res r) override
   {
     scheduler->active.push_back({scheduler->currentActor, std::move(r)});
     scheduler->wake();
   }
-  void CommandClause(CmdFork f, Res r) override
+  void handle_command(CmdFork f, Res r) override
   {
     scheduler->active.push_back({
       f.actor,
       {[f, this](){ scheduler->Run(f.actor); }}});
-    std::move(r).Resume();
+    std::move(r).resume();
   }
-  void ReturnClause() override
+  void handle_return() override
   {
     if (scheduler->active.empty()) { return; }
     scheduler->wake();
@@ -125,7 +125,7 @@ void Scheduler::wake()
     auto resumption = std::move(it->actorResumption);
     currentActor = it->actorData;
     active.erase(it);
-    std::move(resumption).TailResume();
+    std::move(resumption).tail_resume();
     return;
   }
   std::cerr << "deadlock detected" << std::endl;
@@ -136,7 +136,7 @@ void Scheduler::Run(ActorBase* f)
 {
   f->scheduler = this;
   currentActor = f;
-  OneShot::Handle<ActorHandler>(this->label, [f](){ f->body(); }, this);
+  eff::handle<ActorHandler>(this->label, [f](){ f->body(); }, this);
 }
 
 template <typename T>
@@ -144,7 +144,7 @@ T Actor<T>::Receive()
 {
   if (msgQueue.empty()) {
     awaitingMsg = true;
-    OneShot::InvokeCmd(scheduler->label, CmdYield{});
+    eff::invoke_command(scheduler->label, CmdYield{});
   }
   // A waiting actor can be resumed only after a message is put in its
   // inbox, so if the control reaches this point, it means the actor's
@@ -159,20 +159,20 @@ void Actor<T>::Send(T msg)
 {
   awaitingMsg = false;
   msgQueue.push(msg);
-  OneShot::InvokeCmd(scheduler->label, CmdYield{});
+  eff::invoke_command(scheduler->label, CmdYield{});
 }
 
 template <typename T>
 void Actor<T>::Yield()
 {
-  OneShot::InvokeCmd(scheduler->label, CmdYield{});
+  eff::invoke_command(scheduler->label, CmdYield{});
 }
 
 template <typename T>
 void Actor<T>::Spawn(ActorBase* actor)
 {
   actor->scheduler = scheduler;
-  OneShot::InvokeCmd(scheduler->label, CmdFork{{}, actor});
+  eff::invoke_command(scheduler->label, CmdFork{{}, actor});
 }
 
 // ----------------

@@ -48,7 +48,7 @@ class command_clause<Answer, plain<Cmd>> : public can_invoke_command<Cmd> {
   template <typename, typename...> friend class ::cpp_effects::flat_handler;
 protected:
   virtual typename Cmd::out_type handle_command(Cmd) = 0;
-private:
+public:
   virtual typename Cmd::out_type invoke_command(
     std::list<metaframe_ptr>::iterator it, const Cmd& cmd) final override
   {
@@ -96,8 +96,8 @@ class command_clause<Answer, no_resume<Cmd>> : public can_invoke_command<Cmd> {
   template <typename, typename...> friend class ::cpp_effects::flat_handler;
 protected:
   virtual Answer handle_command(Cmd) = 0;
-private:
-  [[noreturn]] virtual typename Cmd::out_type InvokeCmd(
+public:
+  [[noreturn]] virtual typename Cmd::out_type invoke_command(
     std::list<metaframe_ptr>::iterator it, const Cmd& cmd) final override
   {
     // (continued from OneShot::InvokeCmd) ...looking for [d]
@@ -106,7 +106,7 @@ private:
 
     std::move(metastack.front()->fiber).resume_with([&](ctx::fiber&& /*prev*/) -> ctx::fiber {
       if constexpr (!std::is_void<Answer>::value) {
-        *(static_cast<std::optional<Answer>*>(metastack.front()->returnBuffer)) =
+        *(static_cast<std::optional<Answer>*>(metastack.front()->return_buffer)) =
           this->handle_command(cmd);
       } else {
         this->handle_command(cmd);
@@ -151,9 +151,9 @@ class command_clause<Answer, no_manage<Cmd>> : public can_invoke_command<Cmd> {
   template <typename, typename, typename...> friend class ::cpp_effects::handler;
   template <typename, typename...> friend class ::cpp_effects::flat_handler;
 protected:
-  virtual Answer handle_command(Cmd, ::cpp_effects::resumption<typename Cmd::template resumptionType<Answer>>) = 0;
-private:
-  virtual typename Cmd::out_type InvokeCmd(
+  virtual Answer handle_command(Cmd, ::cpp_effects::resumption<typename Cmd::template resumption_type<Answer>>) = 0;
+public:
+  virtual typename Cmd::out_type invoke_command(
     std::list<metaframe_ptr>::iterator it, const Cmd& cmd) final override
   {
     using Out = typename Cmd::out_type;
@@ -174,7 +174,7 @@ private:
       // (compare command_clause<Answer, Cmd>::InvokeCmd)
 
       if constexpr (!std::is_void<Answer>::value) {
-        *(static_cast<std::optional<Answer>*>(metastack.front()->returnBuffer)) =
+        *(static_cast<std::optional<Answer>*>(metastack.front()->return_buffer)) =
           this->handle_command(cmd, ::cpp_effects::resumption<typename Cmd::template resumption_type<Answer>>(resumption));
       } else {
         this->handle_command(cmd, ::cpp_effects::resumption<typename Cmd::template resumption_type<Answer>>(resumption));

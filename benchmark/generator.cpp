@@ -12,7 +12,7 @@
 #include "cpp-effects/cpp-effects.h"
 #include "cpp-effects/clause-modifiers.h"
 
-using namespace CppEffects;
+namespace eff = cpp_effects;
 
 namespace DynamicGenerator {
 
@@ -21,14 +21,14 @@ namespace DynamicGenerator {
 // --------------
 
 template <typename T>
-struct Yield : Command<> {
+struct Yield : eff::command<> {
   T value;
 };
 
 template <typename T>
 void yield(int64_t label, T x)
 {
-  OneShot::InvokeCmd(label, Yield<T>{{}, x});
+  eff::invoke_command(label, Yield<T>{{}, x});
 }
 
 template <typename T>
@@ -40,16 +40,16 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<Result<T>()> resumption;
+  eff::resumption<Result<T>()> resumption;
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<Result<T>, void, Yield<T>> {
-  Result<T> CommandClause(Yield<T> y, Resumption<Result<T>()> r) final override
+class GeneratorHandler : public eff::handler<Result<T>, void, Yield<T>> {
+  Result<T> handle_command(Yield<T> y, eff::resumption<Result<T>()> r) final override
   {
     return GenState<T>{y.value, std::move(r)};
   }
-  Result<T> ReturnClause() final override
+  Result<T> handle_return() final override
   {
     return {};
   }
@@ -70,8 +70,8 @@ class Generator {
 public:
   Generator(std::function<void(std::function<void(T)>)> f)
   {
-    auto label = OneShot::FreshLabel();
-    result = OneShot::Handle<GeneratorHandler<T>>(label, [f, label](){
+    auto label = eff::fresh_label();
+    result = eff::handle<GeneratorHandler<T>>(label, [f, label](){
       f([label](T x) { yield<T>(label, x); });
     });
   }
@@ -100,7 +100,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    result = std::move(result.value().resumption).Resume();
+    result = std::move(result.value().resumption).resume();
     return result.has_value();
   }
   operator bool() const
@@ -123,14 +123,14 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct Yield : Command<> {
+struct Yield : eff::command<> {
   T value;
 };
 
 template <typename T>
 void yield(int64_t label, T x)
 {
-  OneShot::StaticInvokeCmd<GeneratorHandler<T>>(label, Yield<T>{{}, x}); // <--- StaticInvokeCmd
+  eff::static_invoke_command<GeneratorHandler<T>>(label, Yield<T>{{}, x}); // <--- StaticInvokeCmd
 }
 
 template <typename T>
@@ -142,16 +142,16 @@ using Result = std::optional<GenState<T>>;
 template <typename T>
 struct GenState {
   T value;
-  ResumptionData<void, Result<T>>* resumption;
+  eff::resumption_data<void, Result<T>>* resumption;
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<Result<T>, void, Yield<T>> {
-  Result<T> CommandClause(Yield<T> y, Resumption<Result<T>()> r) final override
+class GeneratorHandler : public eff::handler<Result<T>, void, Yield<T>> {
+  Result<T> handle_command(Yield<T> y, eff::resumption<Result<T>()> r) final override
   {
-    return GenState<T>{y.value, r.Release()};
+    return GenState<T>{y.value, r.release()};
   }
-  Result<T> ReturnClause() final override
+  Result<T> handle_return() final override
   {
     return {};
   }
@@ -172,8 +172,8 @@ class Generator {
 public:
   Generator(std::function<void(std::function<void(T)>)> f)
   {
-    auto label = OneShot::FreshLabel();
-    result = OneShot::Handle<GeneratorHandler<T>>(label, [f, label](){
+    auto label = eff::fresh_label();
+    result = eff::handle<GeneratorHandler<T>>(label, [f, label](){
       f([label](T x) { yield<T>(label, x); });
     });
   }
@@ -202,7 +202,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    result = Resumption<Result<T>()>(result.value().resumption).Resume();
+    result = eff::resumption<Result<T>()>(result.value().resumption).resume();
     return result.has_value();
   }
   operator bool() const
@@ -225,14 +225,14 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct Yield : Command<> {
+struct Yield : eff::command<> {
   T value;
 };
 
 template <typename T>
 void yield(int64_t label, T x)
 {
-  OneShot::InvokeCmd(label, Yield<T>{{}, x});
+  eff::invoke_command(label, Yield<T>{{}, x});
 }
 
 template <typename T>
@@ -247,16 +247,16 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  ResumptionData<void, void>* resumption;
+  eff::resumption_data<void, void>* resumption;
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<void, void, Yield<T>> {
-  void CommandClause(Yield<T> y, Resumption<void()> r) final override
+class GeneratorHandler : public eff::handler<void, void, Yield<T>> {
+  void handle_command(Yield<T> y, eff::resumption<void()> r) final override
   {
-    gen->result = GenState<T>{y.value, r.Release()};
+    gen->result = GenState<T>{y.value, r.release()};
   }
-  void ReturnClause() final override
+  void handle_return() final override
   {
   }
 public:
@@ -279,8 +279,8 @@ class Generator {
 public:
   Generator(std::function<void(std::function<void(T)>)> f)
   {
-    auto label = OneShot::FreshLabel();
-    OneShot::Handle<GeneratorHandler<T>>(label, [f, label](){
+    auto label = eff::fresh_label();
+    eff::handle<GeneratorHandler<T>>(label, [f, label](){
       f([label](T x) { yield<T>(label, x); });
     }, this);
   }
@@ -309,7 +309,7 @@ public:
   bool Next()
   {
     if (!result) { throw std::out_of_range("Generator::Value"); }
-    Resumption<void()>(result.value().resumption).Resume();
+    eff::resumption<void()>(result.value().resumption).resume();
     return result.has_value();
   }
   operator bool() const
@@ -332,14 +332,14 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct Yield : Command<> {
+struct Yield : eff::command<> {
   T value;
 };
 
 template <typename T>
 void yield(int64_t label, T x)
 {
-  OneShot::StaticInvokeCmd<GeneratorHandler<T>>(label, Yield<T>{{}, x});
+  eff::static_invoke_command<GeneratorHandler<T>>(label, Yield<T>{{}, x});
 }
 
 template <typename T>
@@ -354,16 +354,16 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void()> resumption;
+  eff::resumption<void()> resumption;
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<void, void, Yield<T>> {
-  void CommandClause(Yield<T> y, Resumption<void()> r) final override
+class GeneratorHandler : public eff::handler<void, void, Yield<T>> {
+  void handle_command(Yield<T> y, eff::resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
   }
-  void ReturnClause() final override
+  void handle_return() final override
   {
   }
 public:
@@ -386,8 +386,8 @@ class Generator {
 public:
   Generator(std::function<void(std::function<void(T)>)> f)
   {
-    auto label = OneShot::FreshLabel();
-    OneShot::Handle<GeneratorHandler<T>>(label, [f, label](){
+    auto label = eff::fresh_label();
+    eff::handle<GeneratorHandler<T>>(label, [f, label](){
       f([label](T x) { yield<T>(label, x); });
     }, this);
   }
@@ -418,7 +418,7 @@ public:
   bool Next()
   {
     //if (!result) { throw std::out_of_range("Generator::Value"); }
-    std::move((*result).resumption).Resume();
+    std::move((*result).resumption).resume();
     return result.has_value();
   }
   operator bool() const
@@ -440,7 +440,7 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct CmdYield : Command<> {
+struct CmdYield : eff::command<> {
   const T value;
 };
 
@@ -449,7 +449,7 @@ struct Yield {
   const int64_t label;
   void operator()(T x) const
   {
-    OneShot::StaticInvokeCmd<GeneratorHandler<T>>(label, CmdYield<T>{{}, x});
+    eff::static_invoke_command<GeneratorHandler<T>>(label, CmdYield<T>{{}, x});
   }
 };
 
@@ -465,16 +465,16 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void()> resumption;
+  eff::resumption<void()> resumption;
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<void, void, CmdYield<T>> {
-  void CommandClause(CmdYield<T> y, Resumption<void()> r) final override
+class GeneratorHandler : public eff::handler<void, void, CmdYield<T>> {
+  void handle_command(CmdYield<T> y, eff::resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
   }
-  void ReturnClause() final override
+  void handle_return() final override
   {
   }
 public:
@@ -497,8 +497,8 @@ class Generator {
 public:
   Generator(std::function<void(Yield<T>)> f)
   {
-    auto label = OneShot::FreshLabel();
-    OneShot::Handle<GeneratorHandler<T>>(label, [f, label](){ f(Yield<T>{label}); }, this);
+    auto label = eff::fresh_label();
+    eff::handle<GeneratorHandler<T>>(label, [f, label](){ f(Yield<T>{label}); }, this);
   }
   Generator() { } // Create a dummy generator that generates nothing
   Generator(const Generator&) = delete;
@@ -527,7 +527,7 @@ public:
   bool Next()
   {
     //if (!result) { throw std::out_of_range("Generator::Value"); }
-    std::move((*result).resumption).Resume();
+    std::move((*result).resumption).resume();
     return result.has_value();
   }
   operator bool() const
@@ -549,16 +549,16 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct CmdYield : Command<> {
+struct CmdYield : eff::command<> {
   const T value;
 };
 
 template <typename T>
 struct Yield {
-  HandlerRef it;
+  eff::handler_ref it;
   void operator()(const T& x) const
   {
-    OneShot::StaticInvokeCmd<GeneratorHandler<T>>(it, CmdYield<T>{{}, x});
+    eff::static_invoke_command<GeneratorHandler<T>>(it, CmdYield<T>{{}, x});
   }
 };
 
@@ -574,16 +574,16 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void()> resumption;
+  eff::resumption<void()> resumption;
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<void, void, CmdYield<T>> {
-  void CommandClause(CmdYield<T> y, Resumption<void()> r) final override
+class GeneratorHandler : public eff::handler<void, void, CmdYield<T>> {
+  void handle_command(CmdYield<T> y, eff::resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
   }
-  void ReturnClause() final override
+  void handle_return() final override
   {
   }
 public:
@@ -606,9 +606,9 @@ class Generator {
 public:
   Generator(std::function<void(Yield<T>)> f)
   {
-    auto label = OneShot::FreshLabel();
-    OneShot::Handle<GeneratorHandler<T>>(label, [&](){
-      auto it = OneShot::FindHandler(label);
+    auto label = eff::fresh_label();
+    eff::handle<GeneratorHandler<T>>(label, [&](){
+      auto it = eff::find_handler(label);
       f(Yield<T>{it});
     }, this);
   }
@@ -639,7 +639,7 @@ public:
   bool Next()
   {
     //if (!result) { throw std::out_of_range("Generator::Value"); }
-    std::move((*result).resumption).Resume();
+    std::move((*result).resumption).resume();
     return result.has_value();
   }
   operator bool() const
@@ -661,16 +661,16 @@ template <typename T>
 class GeneratorHandler;
 
 template <typename T>
-struct CmdYield : Command<> {
+struct CmdYield : eff::command<> {
   const T value;
 };
 
 template <typename T>
 struct Yield {
-  HandlerRef it;
+  eff::handler_ref it;
   void operator()(const T& x) const
   {
-    OneShot::StaticInvokeCmd<GeneratorHandler<T>>(it, CmdYield<T>{{}, x});
+    eff::static_invoke_command<GeneratorHandler<T>>(it, CmdYield<T>{{}, x});
   }
 };
 
@@ -686,16 +686,16 @@ class Generator;
 template <typename T>
 struct GenState {
   T value;
-  Resumption<void()> resumption;
+  eff::resumption<void()> resumption;
 };
 
 template <typename T>
-class GeneratorHandler : public Handler<void, void, NoManage<CmdYield<T>>> {
-  void CommandClause(CmdYield<T> y, Resumption<void()> r) final override
+class GeneratorHandler : public eff::handler<void, void, eff::no_manage<CmdYield<T>>> {
+  void handle_command(CmdYield<T> y, eff::resumption<void()> r) final override
   {
     gen->result = GenState<T>{y.value, std::move(r)};
   }
-  void ReturnClause() final override
+  void handle_return() final override
   {
   }
 public:
@@ -718,9 +718,9 @@ class Generator {
 public:
   Generator(std::function<void(Yield<T>)> f)
   {
-    auto label = OneShot::FreshLabel();
-    OneShot::Handle<GeneratorHandler<T>>(label, [&](){
-      auto it = OneShot::FindHandler(label);
+    auto label = eff::fresh_label();
+    eff::handle<GeneratorHandler<T>>(label, [&](){
+      auto it = eff::find_handler(label);
       f(Yield<T>{it});
     }, this);
   }
@@ -751,7 +751,7 @@ public:
   bool Next()
   {
     //if (!result) { throw std::out_of_range("Generator::Value"); }
-    std::move((*result).resumption).Resume();
+    std::move((*result).resumption).resume();
     return result.has_value();
   }
   operator bool() const
