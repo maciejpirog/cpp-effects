@@ -41,13 +41,11 @@ struct Fork : eff::command<> {
   std::function<void()> proc;
 };
 
-void yield()
-{
+void yield() {
   eff::invoke_command(Yield{});
 }
 
-void fork(std::function<void()> proc)
-{
+void fork(std::function<void()> proc) {
   eff::invoke_command(Fork{{}, proc});
 }
 ```
@@ -57,10 +55,9 @@ We define the scheduler, which is a **handler** that can interpret the two comma
 ```cpp
 using Res = eff::resumption<void()>;
 
-class Scheduler : public eff::handler<void, void, Yield, Fork, Kill> {
+class Scheduler : public eff::flat_handler<void, void, Yield, Fork, Kill> {
 public:
-  static void Start(std::function<void()> f)
-  {
+  static void Start(std::function<void()> f) {
     queue.push_back(eff::wrap<Scheduler>(f));
     
     while (!queue.empty()) {
@@ -80,10 +77,6 @@ private:
     queue.push_back(std::move(r));
     queue.push_back(eff::wrap<Scheduler>(f.proc));
   }
-  
-  void handle_command(Kill, Res) override { }
-  
-  void handle_return() override { }
 };
 
 std::list<Res> Scheduler::queue;
@@ -93,23 +86,20 @@ std::list<Res> Scheduler::queue;
 And that's all it takes! We can now test our library by starting a few threads:
 
 ```cpp
-void worker(int k)
-{
+void worker(int k) {
   for (int i = 0; i < 10; ++i) {
     std::cout << k;
     yield();
   }
 }
 
-void starter()
-{
+void starter() {
   for (int i = 0; i < 5; ++i) {
     fork(std::bind(worker, i));
   }
 }
 
-int main()
-{
+int main() {
   Scheduler::Start(starter);
 
   // Output:
