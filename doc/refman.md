@@ -11,19 +11,19 @@
 
 :memo: [`cpp-effects/cpp-effects.h`](refman-cpp-effects.md) - The core of the library:
 
-- [`class command`](refman-cpp-effects.md#class-command) - Classes derived from `command` define commands.
+- class [`command`](refman-command.md) - Classes derived from `command` define commands.
 
-- [`class flat_handler`](refman-cpp-effects.md#class-flathandler) - Specialisation of `handler` for generic handlers with identity return clause.
+- class [`flat_handler`](refman-cpp-effects.md#class-flathandler) - Specialisation of `handler` for generic handlers with identity return clause.
 
-- [`class handler`](refman-cpp-effects.md#class-handler) - Classes derived from `handler` define handlers.
+- class [`handler`](refman-cpp-effects.md#class-handler) - Classes derived from `handler` define handlers.
 
-- [`typename handler_ref`](refman-cpp-effects.md#class-handlerref) - Abstract reference to an active handler.
+- type [`handler_ref`](refman-cpp-effects.md#class-handlerref) - Abstract reference to an active handler.
 
-- [`class resumption`](refman-cpp-effects.md#class-resumption) - Suspended computation, given to the user in handlers' command clauses.
+- class [`resumption`](refman-cpp-effects.md#class-resumption) - Suspended computation, given to the user in handlers' command clauses.
 
-- [`class resumption_data` and `class resumption_base`](refman-cpp-effects.md#classes-resumptiondata-and-resumptionbase) - "Bare" captured continuations that are not memory-managed by the library.
+- classes [`resumption_data` and `resumption_base`](refman-cpp-effects.md#classes-resumptiondata-and-resumptionbase) - "Bare" captured continuations that are not memory-managed by the library.
 
-- `namespace cpp_effects_internal` - Details of the implementation, exposed for experimentation.
+- namespace `cpp_effects_internal` - Details of the implementation, exposed for experimentation.
 
 - Functions:
 
