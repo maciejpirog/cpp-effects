@@ -36,7 +36,7 @@ using out_type = void;  // in command<>
 
 The type returned by `invoke_command` called with the (drived) command.
 
-### :large_orange_diamond: ResumptionType
+### :large_orange_diamond: resumption_type
 
 ```cpp
 template <typename Answer> using resumption_type = Answer(Out);  // in command<Out>
@@ -54,5 +54,5 @@ Answer handle_command(Cmd, resumption<typename Cmd::template resumption_type<Ans
 For example, for `Cmd : command<int>` and `Answer = bool`, the type of `handle_commsnd` is:
 
 ```cpp
-bool MyHandler::handle_command(Cmd, Resumption<bool(int)>)
+bool MyHandler::handle_command(Cmd, resumption<bool(int)>)
 ```
