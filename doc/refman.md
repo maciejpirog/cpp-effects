@@ -13,7 +13,7 @@
 
 - class [`command`](refman-command.md) - Classes derived from `command` define commands.
 
-- class [`flat_handler`](refman-flat_handler.md) - Specialisation of `handler` for generic handlers with identity return clause.
+- class [`flat_handler`](refman-flat_handler.md) - Version of `handler` for generic handlers with identity return clause.
 
 - class [`handler`](refman-handler.md) - Classes derived from `handler` define handlers.
 
@@ -25,32 +25,32 @@
 
 - namespace `cpp_effects_internal` - Details of the implementation, exposed for experimentation.
 
-- Functions:
+- functions:
 
-  * `debug_print_metastack` - Print out the current stack of handlers. Useful for "printf" debugging.
+  * [`debug_print_metastack`](refman-debug_print_metastack.md) - Prints out the current stack of handlers. Useful for "printf" debugging.
   
-  * `fresh_label` - Generates a unique label that identifies a handler.
+  * [`fresh_label`](refman-fresh_label.md) - Generates a unique label that identifies a handler.
   
-  * `handle` - Creates a new handler object and uses it to handle a computation.
+  * [`handle`](refman-handle.md) - Creates a new handler object and uses it to handle a computation.
   
   * `handle_ref` - Similar to `handle`, but reveals a reference to the handler.
   
-  * `handle_with` - Handles a computation using a given handler object.
+  * [`handle_with`](refman-handle_with.md) - Handles a computation using a given handler object.
   
   * `handle_with_ref` - Handles a computation using a particular handler object and reveals a reference to the handler.
   
-  * `wrap` - Lifts a function to a resumption handled by a new handler object.
+  * [`wrap`](refman-wrap.md) - Lifts a function to a resumption handled by a new handler object.
   
-  * `wrap_with` - Lifts a function to a resumption handled by a given handler object.
+  * [`wrap_with`](refman-wrap_with.md) - Lifts a function to a resumption handled by a given handler object.
   
-  * `invoke_command` - Used in a handled computation to invoke a particular command, suspend the computation, and transfer control to the handler.
+  * [`invoke_command`](refman-invoke_command.md) - Used in a handled computation to invoke a particular command, suspend the computation, and transfer control to the handler.
   
-  * `static_invoke_command` - Similar to `invoke_commad`, but explicitly gives the type of the handler object (not type-safe, but more efficient).
+  * [`static_invoke_command`](refman-static_invoke_command.md) - Similar to `invoke_commad`, but explicitly gives the type of the handler object (not type-safe, but more efficient).
 
 :memo: [`cpp-effects/clause-modifiers.h`](refman-clause-modifiers.md) - Modifiers that force specific shapes of command clauses in handlers:
 
-- [`no_manage`](refman-clause-modifiers.md#nomanage-modifier) - Command clause that does not memory-manage the handler.
+- [`no_manage`](refman-no_manage.md) - Command clause that does not memory-manage the handler.
 
-- [`no_resume`](refman-clause-modifiers.md#noresume-modifier) - Command clause that does not use its resumptions.
+- [`no_resume`](refman-no_resume.md) - Command clause that does not use its resumptions.
 
-- [`plain`](refman-clause-modifiers.md#plain-modifier) - Command clause that interprets a command as a function (i.e., a self- and tail-resumptive clause).
+- [`plain`](refman-plain.md) - Command clause that interprets a command as a function (i.e., a self- and tail-resumptive clause).

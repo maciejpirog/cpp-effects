@@ -705,7 +705,7 @@ Used in a handled computation to invoke a particular command. The current comput
 template <typename H, typename Cmd>
 static typename Cmd::OutType StaticInvokeCmd(const Cmd& cmd);
   
-template <typename H, typename Cmd>
+template <typename H, typename Cmd
 static typename Cmd::OutType StaticInvokeCmd(int64_t gotoHandler, const Cmd& cmd);
 
 template <typename H, typename Cmd>

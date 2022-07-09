@@ -89,7 +89,7 @@ using handler_ref = std::list<cpp_effects_internals::metaframe_ptr>::iterator;
 
 // Misc
 
-int64_t& fresh_label();
+int64_t fresh_label();
 
 void debug_print_metastack();
 
@@ -135,7 +135,7 @@ resumption<typename H::answer_type()> wrap(
     int64_t label, std::function<typename H::body_type()> body, Args&&... args);
 
 template <typename H, typename A, typename... Args>
-resumption<typename H::answer_type()> wrap(
+resumption<typename H::answer_type(A)> wrap(
     int64_t label, std::function<typename H::body_type(A)> body, Args&&... args);
 
 template <typename H, typename... Args>
@@ -143,7 +143,7 @@ resumption<typename H::answer_type()> wrap(
     std::function<typename H::body_type()> body, Args&&... args);
 
 template <typename H, typename A, typename... Args>
-resumption<typename H::answer_type()> wrap(
+resumption<typename H::answer_type(A)> wrap(
     std::function<typename H::body_type(A)> body, Args&&... args);
 
 template <typename H>
@@ -725,7 +725,7 @@ class flat_handler<void, Cmds...> : public handler<void, void, Cmds...> {
 
 // Misc
 
-int64_t& fresh_label()
+int64_t fresh_label()
 {
   static int64_t freshCounter = -1;
   return --freshCounter;

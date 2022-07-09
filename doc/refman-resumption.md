@@ -5,6 +5,9 @@
 A resumption represents a suspended computation. A resumption is given to the user either as an argument of `handler<...>::handle_command`, or can be lifted from a function using a constructor or `wrap`.
 
 ```cpp
+template <typename T>
+class resumption;
+
 template <typename Out, typename Answer>
 class resumption<Answer(Out)> {
 public:

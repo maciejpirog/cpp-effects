@@ -128,28 +128,3 @@ Output:
 
 ## `NoManage` modifier
 
-Specialisation for handlers that either:
-
-- Don't expose the resumption (i.e., all resumes happen within command
-  clauses),
-
-- Don't access the handler object after resume,
-
-which amounts to almost all practical use-cases of handlers. A
-`NoManage` clause does not participate in the reference-counting
-memory management of handlers, saving a tiny bit of performance.
-
-```cpp
-template <typename Cmd>
-struct NoManage { };
-
-template <typename Answer, typename Cmd>
-class CmdClause<Answer, NoManage<Cmd>> {
-protected:
-  virtual Answer CommandClause(Cmd, Resumption<typename Cmd::template ResumptionType<Answer>>) = 0;
-};
-```
-
-Not that the interface of `CommandClause` is exactly the same as in
-the usual command clause. `Plain` and `NoResume` clauses are
-automatically `NoManage`.
