@@ -57,7 +57,7 @@ We define the scheduler, which is a **handler** that can interpret the two comma
 ```cpp
 using Res = eff::resumption<void()>;
 
-class Scheduler : public eff::flat_handler<void, void, Yield, Fork> {
+class Scheduler : public eff::flat_handler<void, Yield, Fork> {
 public:
   static void Start(std::function<void()> f)
   {
