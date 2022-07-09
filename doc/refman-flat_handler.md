@@ -1,5 +1,7 @@
 # class `flat_handler`
 
+[<< Back to reference manual](refman.md)
+
 Base class for [handlers](refman-handler.md) in which the return clause is identity. It is useful for handlers that are generic in the answer type, and spares the programmer writing a separate specialisation for when the answer type is `void`.
 
 ```cpp
@@ -23,7 +25,7 @@ The `handle_return` functions are overridden as:
 
 ```cpp
 template <typename Answer, typename... Cmds>
-Answer flat_handler<Answer, Cmds...>::handle_Return(Answer a)
+Answer flat_handler<Answer, Cmds...>::handle_return(Answer a)
 {
   return a;
 }

@@ -1,5 +1,7 @@
 # class `handler`
 
+[<< Back to reference manual](refman.md)
+
 Base class for handlers.
 
 ```cpp
