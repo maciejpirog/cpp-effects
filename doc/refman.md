@@ -9,7 +9,7 @@
 
 **Namespace:** `cpp_effects`
 
-:memo: [`cpp-effects/cpp-effects.h`](refman-cpp-effects.md) - The core of the library:
+:memo: [`cpp-effects/cpp-effects.h`](../include/cpp-effects/cpp-effects.h) - The core of the library:
 
 - class [`command`](refman-command.md) - Classes derived from `command` define commands.
 
@@ -47,7 +47,7 @@
   
   * [`static_invoke_command`](refman-static_invoke_command.md) - Similar to `invoke_commad`, but explicitly gives the type of the handler object (not type-safe, but more efficient).
 
-:memo: [`cpp-effects/clause-modifiers.h`](refman-clause-modifiers.md) - Modifiers that force specific shapes of command clauses in handlers:
+:memo: [`cpp-effects/clause-modifiers.h`](../include/cpp-effects/clause-modifiers.h) - Modifiers that force specific shapes or properties of command clauses in handlers:
 
 - [`no_manage`](refman-no_manage.md) - Command clause that does not memory-manage the handler.
 
