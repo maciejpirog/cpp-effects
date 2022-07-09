@@ -13,9 +13,9 @@
 
 - class [`command`](refman-command.md) - Classes derived from `command` define commands.
 
-- class [`flat_handler`](refman-cpp-effects.md#class-flathandler) - Specialisation of `handler` for generic handlers with identity return clause.
+- class [`flat_handler`](refman-class-flat_handler.md) - Specialisation of `handler` for generic handlers with identity return clause.
 
-- class [`handler`](refman-cpp-effects.md#class-handler) - Classes derived from `handler` define handlers.
+- class [`handler`](refman-handler.md) - Classes derived from `handler` define handlers.
 
 - type [`handler_ref`](refman-cpp-effects.md#class-handlerref) - Abstract reference to an active handler.
 

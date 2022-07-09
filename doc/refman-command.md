@@ -51,7 +51,7 @@ Compare the type of `handle_command` for a command `Cmd`:
 Answer handle_command(Cmd, resumption<typename Cmd::template resumption_type<Answer>>)
 ```
 
-For example, for `Cmd : command<int>` and `Answer = bool`, the type of `handle_commsnd` is:
+For example, for `Cmd : command<int>`, the type of the corresponding `handle_command` in a class `MyHandler : handler<bool, ..., Cmd, ...>` is
 
 ```cpp
 bool MyHandler::handle_command(Cmd, resumption<bool(int)>)
