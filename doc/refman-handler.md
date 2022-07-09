@@ -75,7 +75,7 @@ A handler handles a particular command `Cmd` if it inherits from `handler<..., C
 
 - `Cmd c` - The handled command. The right clause is chosen via the overloading resolution mechanism out of the overloads of `handle_command` in the handler based on the type `Cmd`.
 
-- `resumption<typename Cmd::template resumptionType<Answer>> r` - The captured resumption. When the user invokes a command, the control goes back to the handler and the computation delimited by the handler is captured as the resumption `r`. Since resumptions are one-shot, when we resume `r`, we have to give up the ownership of `r`, which makes `r` invalid.
+- `resumption<typename Cmd::template resumption_type<Answer>> r` - The captured resumption. When the user invokes a command, the control goes back to the handler and the computation delimited by the handler is captured as the resumption `r`. Since resumptions are one-shot, when we resume `r`, we have to give up the ownership of `r`, which makes `r` invalid.
 
 - **return value** `Answer` - The overall result of handling the computation.
 

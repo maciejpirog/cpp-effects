@@ -17,11 +17,11 @@
 
 - class [`handler`](refman-handler.md) - Classes derived from `handler` define handlers.
 
-- type [`handler_ref`](refman-cpp-effects.md#class-handlerref) - Abstract reference to an active handler.
+- type [`handler_ref`](refman-handler_ref.md) - Abstract reference to an active handler.
 
-- class [`resumption`](refman-cpp-effects.md#class-resumption) - Suspended computation, given to the user in handlers' command clauses.
+- class [`resumption`](refman-resumption.md) - Suspended computation, given to the user in command clauses of a handler.
 
-- classes [`resumption_data` and `resumption_base`](refman-cpp-effects.md#classes-resumptiondata-and-resumptionbase) - "Bare" captured continuations that are not memory-managed by the library.
+- classes [`resumption_data`](refman-resumption_data.md) and [`resumption_base`](refman-resumption_data.md) - "Bare" captured continuations that are not memory-managed by the library.
 
 - namespace `cpp_effects_internal` - Details of the implementation, exposed for experimentation.
 
