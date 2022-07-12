@@ -22,8 +22,7 @@ where
 
 The stack grows bottom-to-top, while the bottom frame is always a dummy "global" handler with label `0`.
 
-<details>
-  <summary><strong>Example</strong></summary>
+### Example
 
 ```cpp
 struct Error : command<> { };
@@ -76,5 +75,3 @@ Example output:
 100:12ErrorHandler[5Error]
 0:N10cpp_effects9metaframeE
 ```
-
-</details>

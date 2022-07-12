@@ -140,7 +140,7 @@ endif()
 
 ```
 
-## Building examples
+## Building examples (natively)
 
 
 This repository contains some examples, tests, and benchmarks. The easiest way to build these is to use `cmake`. You will need `cmake` and `boost` in any non-ancient versions. For example, the following should do the trick on macOS:
@@ -159,7 +159,9 @@ $ bin/threads
 01021032104321043210432104321043210432104321432434
 ```
 
-You can also run the examples in a Docker container. Just type the following to build and then run the container shell:
+## Building examples (using Docker)
+
+You can also compile and run the examples in a Docker container. Just type the following to build and then run the container shell:
 
 ```bash
 $ sudo docker build -t cppeff .

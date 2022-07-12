@@ -33,11 +33,11 @@
   
   * [`handle`](refman-handle.md) - Creates a new handler object and uses it to handle a computation.
   
-  * `handle_ref` - Similar to `handle`, but reveals a reference to the handler.
+  * [`handle_ref`](refman-handle_ref.md) - Similar to `handle`, but reveals a reference to the handler.
   
   * [`handle_with`](refman-handle_with.md) - Handles a computation using a given handler object.
   
-  * `handle_with_ref` - Handles a computation using a particular handler object and reveals a reference to the handler.
+  * [`handle_with_ref`](refman-handle_with_ref.md) - Handles a computation using a particular handler object and reveals a reference to the handler.
   
   * [`wrap`](refman-wrap.md) - Lifts a function to a resumption handled by a new handler object.
   
