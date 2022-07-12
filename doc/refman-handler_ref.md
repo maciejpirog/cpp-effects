@@ -8,10 +8,11 @@ Abstract reference to an active handler.
 using handler_ref = ...;
 ```
 
-A `handler_ref` is an abstract reference to an active handler, which
-can be used to tie the handler to a command, without the need to look
-up the handler every time we use `invoke_command` or
-`static_invoke_command`.
+A `handler_ref` is an abstract reference to an active
+[handler](refman-handler.md), which can be used to tie the handler to
+a [command](refman-command.md), without the need to look up the
+handler every time we use [`invoke_command`](refman-invoke_command.md)
+or [`static_invoke_command`](refman-static_invoke_command.md).
 
 :bangbang: Handler references are valid if the referenced handler is
 active. Invoking a command with a reference to a handler of a
@@ -20,10 +21,10 @@ cause undefined behaviour.
 
 A handler reference should not be confused with:
 
-- A reference to an object of a class that inherits from `handler`,
-  although it is not far from the truth: `handler_ref` can be thought
-  of as a form of an iterator that points to an object, not a
-  reference to the object itself.
+- A reference to an object of a class that inherits from
+  [`handler`](refman-handler.md), although it is not far from the
+  truth: `handler_ref` can be thought of as a form of an iterator that
+  points to an object, not a reference to the object itself.
 
 - A label, since labels are not necessarily unique, and invoking a
   command with a label still involves looking up a handler with the

@@ -13,7 +13,6 @@ class resumption<Answer(Out)> {
 public:
   resumption();
   resumption(resumption_data<Out, Answer>* data);
-  resumption(resumption_data<Out, Answer>& data);
   resumption(std::function<Answer(Out)>);
   resumption(const resumption<Answer(Out)>&) = delete;
   resumption(resumption<Answer(Out)>&& other);
@@ -35,7 +34,6 @@ class resumption<Answer()> {
 public:
   resumption();
   resumption(resumption_data<void, Answer>* data);
-  resumption(resumption_data<void, Answer>& data);
   resumption(std::function<Answer()>);
   resumption(const resumption<Answer()>&) = delete;
   resumption(resumption<Answer()>&& other);
@@ -127,7 +125,7 @@ resumption_data<Out, Answer>* release();
 
 releases the pointer to the suspended computation.
 
-- **return value** `resumption_data<Out, Answer>*` - The released pointer.
+- **return value** [`resumption_data<Out, Answer>*`](refman-resumption_data.md) - The released pointer.
 
 **Warning:** :warning: Never use `delete` on the released pointer! If you want to get rid of it safely, wrap it back in a dummy `resumption` value, and let its destructor do the job. For example:
 
@@ -150,7 +148,8 @@ Answer resumption<Answer()>::resume() &&
 
 resume the suspended computation captured in the resumption.
 
-- `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
+- `Out cmdResult` - The value that is returned by the
+  [command](refman-command.md) on which the resumption "hangs".
 
 - **Return value** `Answer` - The result of the resumed computation.
 
@@ -164,7 +163,7 @@ Answer resumption<Answer()>::tail_resume() &&
 
 Use to resume the suspended computation captured in the resumption in a tail position in the command clause. This is to be used **only inside a command clause** as the returned expression. Semantically, for an rvalue reference `r`, the expressions `return r.resume(...);` and `return r.tail_resume(...);` are semantically equivalent, but the latter does not build up the call stack.
 
-- `Out cmdResult` - The value that is returned by the command on which the resumption "hangs".
+- `Out cmdResult` - The value that is returned by the [command](refman-command.md) on which the resumption "hangs".
 
 - **Return value** `Answer` - The result of the resumed computation.
 
@@ -197,4 +196,4 @@ class H : Handler<Answer, void, Op> {
 }
 ```
 
-What happens behind the scenes is that `tail_resume` returns a trivial value of type `Answer`, while the real resuming happens in a trampoline hidden in the `handle` function.
+What happens behind the scenes is that `tail_resume` returns a trivial value of type `Answer`, while the real resuming happens in a trampoline hidden in the [`handle`](refman-handle.md) function.

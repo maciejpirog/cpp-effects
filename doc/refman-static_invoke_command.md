@@ -1,4 +1,4 @@
-# function `invoke_command`
+# function `static_invoke_command`
 
 [<< Back to reference manual](refman.md)
 
@@ -13,7 +13,7 @@ template <typename H, typename Cmd>
 typename Cmd::out_type static_invoke_command(handler_ref it, const Cmd& cmd);
 ```
 
-Used in a handled computation to invoke a particular command (similar to [`invoke_command`](refman-invoke_command.md)), but the handler with the given label is statically cast to `H`. The current computation (up  to and including the appropriate handler) is suspended, captured in a resumption, and the control goes to the handler.
+Used in a handled computation to invoke a particular [command](refman-command.md) (similar to [`invoke_command`](refman-invoke_command.md)), but the handler with the given label is statically cast to `H`. The current computation (up  to and including the appropriate handler) is suspended, captured in a resumption, and the control goes to the handler.
 
 - `typename H` - The type of the handler used to handled the command.
 

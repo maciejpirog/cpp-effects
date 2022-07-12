@@ -161,7 +161,7 @@ $ bin/threads
 
 ## Building examples (using Docker)
 
-You can also compile and run the examples in a Docker container. Just type the following to build and then run the container shell:
+You can also compile and run the examples in a Docker container. Just type in the following to build and then run the container shell:
 
 ```bash
 $ sudo docker build -t cppeff .

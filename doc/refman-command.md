@@ -43,9 +43,9 @@ template <typename Answer> using resumption_type = Answer(Out);  // in command<O
 template <typename Answer> using resumption_type = Answer();     // in command<>
 ```
 
-The type parameter of the resumption that captures a computation suspended by invoking the (derived) command. The type of the resumption depends also on the overall answer type of the handler, hence `resumption_type` is a template.
+The type parameter of the [resumption](refman-resumption.md) that captures a computation suspended by invoking the (derived) command. The type of the resumption depends also on the overall answer type of the handler, hence `resumption_type` is a template.
 
-Compare the type of `handle_command` for a command `Cmd`:
+Compare the type of [`handle_command`](refman-handler.md) for a command `Cmd`:
 
 ```cpp
 Answer handle_command(Cmd, resumption<typename Cmd::template resumption_type<Answer>>)

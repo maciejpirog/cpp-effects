@@ -11,7 +11,7 @@ template <typename H, typename... Args>
 typename H::answer_type handle(std::function<typename H::body_type()> body, Args&&... args);
 ```
 
-Create a new handler of type `H` and use it to handle the computation `body`.
+Create a new [handler](refman-handler.md) of type `H` and use it to handle the computation `body`.
 
 - `typename H` - The type of the handler that is used to handle `body`.
 
