@@ -1,4 +1,4 @@
-# Quick Introduction (and Comparison with Effectful Functional Programming)
+# Quick introduction (and comparison with effectful functional programming)
 
 [<< Back to reference manual](refman.md)
 
@@ -68,7 +68,7 @@ int get() {
 
 :dromedary_camel: The equivalent code in OCaml is as follows (compare [ocaml-multicore/effects-examples/state.ml](https://github.com/ocaml-multicore/effects-examples/blob/master/state.ml)):
 
-```
+```ocaml
 (* definition of operations *)
 effect Put : int -> unit
 effect Get : int
