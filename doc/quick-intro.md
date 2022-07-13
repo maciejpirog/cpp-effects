@@ -64,7 +64,7 @@ int get() {
 }
 ```
 
-:point_right: Note that the `{}` in `Put{{}, s}` is necessary to initialise (even if the initialisation is rather trivial), the `command` superclass.
+:point_right: Note that the `{}` in `Put{{}, s}` is necessary to initialise (even if the initialisation is rather trivial) the `command` superclass.
 
 :dromedary_camel: The equivalent code in OCaml is as follows (compare [ocaml-multicore/effects-examples/state.ml](https://github.com/ocaml-multicore/effects-examples/blob/master/state.ml)):
 
