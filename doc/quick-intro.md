@@ -95,7 +95,7 @@ private:
   {
     return std::move(r).tail_resume(state);
   }
-  T handle_command(Put p, eff::esumption<T()> r) override
+  T handle_command(Put p, eff::resumption<T()> r) override
   {
     state = p.newState;
     return std::move(r).tail_resume();
@@ -181,7 +181,7 @@ A more efficient, albeit more dangerous, is to keep a **reference** to the handl
 ```cpp
 void foo()
 {
-  eff::handle_Ref<SomeHandler>([](auto href) {
+  eff::handle_ref<SomeHandler>([](auto href) {
     eff::invoke_command(href, SomeCmd{});    // <---+
     eff::handle<SomeHandler>([]() {          //     |
       eff::invoke_command(href, SomeCmd{});  // <---+

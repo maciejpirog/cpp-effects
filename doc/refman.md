@@ -2,7 +2,7 @@
 
 ## Introduction
 
-:boom: [Quick intro](quick-intro.md) (and comparison with effectful functional programming) - A brief overview of the API of the library. It assumes that the reader has some basic understanding of algebraic effects and effect handlers.
+:rocket: [Quick intro](quick-intro.md) (and comparison with effectful functional programming) - A brief overview of the API of the library. It assumes that the reader has some basic understanding of algebraic effects and effect handlers.
 
 
 ## Structure of the library
