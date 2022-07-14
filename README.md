@@ -9,7 +9,7 @@ The library relies on modern C++ features (move semantics, variadic templates, c
 
 ## Documentation
 
-- [Reference](doc/refman.md) - A detailed explanation of the library's API and a short discussion about the overall design of the library. It is a suitable introduction for a reader already familiar with effect handlers (for example, as they are usually discussed in the context of functional programming).
+- [Reference](doc/refman.md) - A detailed explanation of the library's API and a short discussion about the overall design of the library.
 
 - [Draft paper](https://homepages.inf.ed.ac.uk/slindley/papers/cppeff-draft-april2022.pdf) - A draft of a research paper that describes the usage and implementation of the library.
 
