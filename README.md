@@ -11,7 +11,7 @@ The library relies on modern C++ features (move semantics, variadic templates, c
 
 - [Reference](doc/refman.md) - A detailed explanation of the library's API and a short discussion about the overall design of the library.
 
-- [Draft paper](https://homepages.inf.ed.ac.uk/slindley/papers/cppeff-draft-april2022.pdf) - A draft of a research paper that describes the usage and implementation of the library.
+- [High-level effect handlers in C++](https://dl.acm.org/doi/pdf/10.1145/3563445) - An accompanying research paper (OOPSLA 2022).
 
 ## A quick example: lightweight cooperative threads
 
