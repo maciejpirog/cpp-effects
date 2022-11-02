@@ -48,7 +48,7 @@ void yield()
 
 void fork(std::function<void()> proc)
 {
-  eff::invoke_command(Fork{{}, proc});
+  eff::invoke_command(Fork{}, proc});
 }
 ```
 
