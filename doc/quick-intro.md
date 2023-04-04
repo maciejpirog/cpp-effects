@@ -44,7 +44,7 @@ struct command<> {
 };
 ```
 
-To *perform* (or: *invoke*) a command, we need to use an object of such the derived class. The out type of the command becomes the result of the invocation:
+To *perform* (or: *invoke*) a command, we need to use an object of such a derived class. The out type of the command becomes the result of the invocation:
 
 ```cpp
 template <typename Cmd>
@@ -58,15 +58,14 @@ void put(int s) {
   eff::invoke_command(Put{{}, s});
 }
 
-template <typename S>
 int get() {
   return eff::invoke_command(Get{});
 }
 ```
 
-:point_right: Note that the `{}` in `Put{{}, s}` is necessary to initialise (even if the initialisation is rather trivial) the `command` superclass.
+:point_right: Note the `{}` in `Put{{}, s}`, which is necessary in C++ to initialise (even if the initialisation is rather trivial) the `command` superclass.
 
-:dromedary_camel: The equivalent code in OCaml is as follows (compare [ocaml-multicore/effects-examples/state.ml](https://github.com/ocaml-multicore/effects-examples/blob/master/state.ml)):
+:dromedary_camel: The equivalent code in OCaml would be as follows (compare [ocaml-multicore/effects-examples/state.ml](https://github.com/ocaml-multicore/effects-examples/blob/master/state.ml)):
 
 ```ocaml
 (* definition of operations *)
