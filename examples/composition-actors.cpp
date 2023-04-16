@@ -2,7 +2,10 @@
 // Maciej Pirog, Huawei Edinburgh Research Centre, maciej.pirog@huawei.com
 // License: MIT
 
-// Example: Erlang-style actors obtained by coposition of threads and mutable state
+// Example: Erlang-style actors obtained by composition of two effects: threads and mutable state
+
+// In this example, the dynamic binding of an effect to a handler is crucial. It is used by an
+// actor to get the reference to the right mailbox in the "receive" function.
 
 #include <iostream>
 #include <any>
