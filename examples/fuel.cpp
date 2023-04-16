@@ -87,7 +87,7 @@ void tryFib(int64_t n)
   if (res) {
     std::cout << res.value() << std::endl;
   } else {
-    std::cout << "...took too long to complete" << std::endl;
+    std::cout << "(not enough fuel to complete this computation)" << std::endl;
   }
 }
 
@@ -110,7 +110,7 @@ int main()
   // fib(5) = 5
   // fib(10) = 55
   // fib(15) = 610
-  // fib(20) = ...took too long to complete
+  // fib(20) = (not enough fuel to complete this computation)
 
   measureFib(5);
   measureFib(10);
