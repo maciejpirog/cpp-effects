@@ -250,11 +250,11 @@ public:
     std::list<cpp_effects_internals::metaframe_ptr>::iterator it, const Cmd& cmd) = 0;
 };
 
-// command_clause is a class that allows us to define a handler with a
-// command clause for a particular operation. It inherits from
-// Caninvoke_command, and overrides invoke_command, which means that the user,
-// who cannot know the answer type of a handler, can call the command
-// clause of the handler anyway, by up-casting to can_invoke_command.
+// The command_clause class is used to define a handler with a command clause
+// for a particular operation. It inherits from can_invoke_command (see above),
+// and overrides invoke_command, which means that the user (who cannot know the
+// answer type of a handler!) can call the command clause of the handler anyway,
+// by up-casting to can_invoke_command.
 
 template <typename Answer, typename Cmd>
 class command_clause : public can_invoke_command<Cmd> {
