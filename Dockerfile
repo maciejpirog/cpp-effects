@@ -4,7 +4,7 @@ run apt-get -y update
 run apt-get -y install cmake
 run apt-get -y install libboost-context-dev
 
-run apt-get -y install time # for benchamrks
+run apt-get -y install time  # needed for benchmarks
 
 workdir /home
 
